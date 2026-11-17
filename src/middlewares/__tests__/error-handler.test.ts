@@ -86,7 +86,13 @@ describe("errorHandler", () => {
 
     expect(status).toBe(400);
     expect(body.error.code).toBe("VALIDACAO");
-    expect(body.error.details?.map((d) => d.field)).toEqual(["nome", "idade"]);
+    expect(body.error.details).toEqual([
+      {
+        field: "nome",
+        message: "Entrada inválida: esperava um texto, recebeu um número",
+      },
+      { field: "idade", message: "Campo obrigatório." },
+    ]);
   });
 
   it("responde 400 em português quando o JSON está malformado", async () => {
