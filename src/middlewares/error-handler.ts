@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import { ZodError } from "zod";
 import { Prisma } from "../../generated/prisma/client";
 import { AppError } from "../utils/app-error";
+import { logger } from "../utils/logger";
 import type { ErrorDetail } from "../utils/response";
 
 // Mensagens padrão para exceções HTTP lançadas pelo próprio Hono (corpo inválido, payload grande etc.)
@@ -68,14 +69,11 @@ export const errorHandler: ErrorHandler = (err, c) => {
   const appError = toAppError(err);
 
   if (!appError) {
-    console.error(
-      JSON.stringify({
-        level: "error",
-        message: err.message,
-        stack: err.stack,
-        timestamp: new Date().toISOString(),
-      }),
-    );
+    logger.error("erro_nao_tratado", {
+      requestId: c.get("requestId"),
+      error: err.message,
+      stack: err.stack,
+    });
     return c.json(
       {
         error: {
