@@ -1,0 +1,41 @@
+{
+  "name": "sghss-api",
+  "version": "0.1.0",
+  "description": "API REST do Sistema de Gestão Hospitalar e de Serviços de Saúde (SGHSS) da VidaPlus",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d --wait",
+    "db:stop": "docker compose stop",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9",
+    "@types/bun": "^1.4.4",
+    "dotenv": "^18.0.10",
+    "eslint": "^9",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.10.1",
+    "prisma": "^7.10.1",
+    "typescript": "^5",
+    "typescript-eslint": "^8.73.0"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "hono": "^4.13.19"
+  }
+}

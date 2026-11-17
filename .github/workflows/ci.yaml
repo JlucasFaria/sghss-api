@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DATABASE_URL: postgresql://sghss:sghss@localhost:5432/sghss_test
+  NODE_ENV: test
+
+jobs:
+  qualidade:
+    name: Lint, formatação e tipos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      - name: Gerar Prisma Client
+        run: bun run db:generate
+
+      - name: Prettier
+        run: bun run format:check
+
+      - name: ESLint
+        run: bun run lint
+
+      - name: TypeScript
+        run: bun run typecheck
+
+  testes:
+    name: Testes
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: sghss_test
+          POSTGRES_USER: sghss
+          POSTGRES_PASSWORD: sghss
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      - name: Gerar Prisma Client
+        run: bun run db:generate
+
+      - name: Aplicar migrations
+        run: bun run db:deploy
+
+      - name: Testes
+        run: bun test
