@@ -1,8 +1,9 @@
 // Ponto de entrada: sobe o servidor HTTP com a aplicação
+import { env } from "./config/env";
 import { app } from "./app";
 
 const server = Bun.serve({
-  port: Number(process.env["PORT"] ?? 3000),
+  port: env.PORT,
   fetch: app.fetch,
 });
 
