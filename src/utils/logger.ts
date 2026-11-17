@@ -8,10 +8,11 @@ const write = (level: Level, message: string, fields: Fields = {}) => {
   // Em testes os logs só poluiriam a saída do bun test
   if (env.NODE_ENV === "test") return;
 
+  // Campos fixos por último para que os extras não os sobrescrevam
   const line = JSON.stringify({
+    ...fields,
     level,
     message,
-    ...fields,
     timestamp: new Date().toISOString(),
   });
 
