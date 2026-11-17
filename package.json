@@ -9,7 +9,11 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:up": "docker compose up -d --wait",
+    "db:stop": "docker compose stop",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres"
   },
   "devDependencies": {
     "@eslint/js": "^9",
