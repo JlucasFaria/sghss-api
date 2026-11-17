@@ -54,13 +54,17 @@ A API sobe em `http://localhost:3000`. Para verificar: `GET /health`.
 | `bun run start`        | Inicia a API                                |
 | `bun test`             | Executa os testes                           |
 | `bun run lint`         | Verifica o código com ESLint                |
+| `bun run lint:fix`     | Corrige automaticamente problemas do ESLint |
 | `bun run format`       | Formata o código com Prettier               |
 | `bun run format:check` | Verifica a formatação                       |
 | `bun run typecheck`    | Verifica os tipos com TypeScript            |
-| `bun run db:up`        | Sobe o PostgreSQL via Docker Compose        |
-| `bun run db:down`      | Remove o container do PostgreSQL            |
+| `bun run db:up`        | Sobe o PostgreSQL e aguarda ficar saudável  |
+| `bun run db:stop`      | Para o container (mantém os dados)          |
+| `bun run db:down`      | Remove o container (mantém o volume)        |
+| `bun run db:logs`      | Acompanha os logs do PostgreSQL             |
 | `bun run db:generate`  | Gera o Prisma Client                        |
 | `bun run db:migrate`   | Cria e aplica migrations em desenvolvimento |
+| `bun run db:deploy`    | Aplica migrations pendentes (CI/produção)   |
 | `bun run db:studio`    | Abre o Prisma Studio                        |
 
 ## Estrutura
