@@ -1,5 +1,6 @@
 // Validação e tipagem das variáveis de ambiente: a aplicação não sobe com configuração inválida
 import { z } from "zod";
+import "./zod";
 
 const envSchema = z.object({
   DATABASE_URL: z.url({
