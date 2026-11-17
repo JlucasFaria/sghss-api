@@ -1,0 +1,10 @@
+// Modelos de domínio do SGHSS são definidos no grupo de modelagem do banco.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
