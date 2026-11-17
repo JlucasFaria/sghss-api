@@ -27,9 +27,6 @@ jobs:
       - name: Instalar dependências
         run: bun install --frozen-lockfile
 
-      - name: Gerar Prisma Client
-        run: bun run db:generate
-
       - name: Prettier
         run: bun run format:check
 
@@ -64,9 +61,6 @@ jobs:
 
       - name: Instalar dependências
         run: bun install --frozen-lockfile
-
-      - name: Gerar Prisma Client
-        run: bun run db:generate
 
       - name: Aplicar migrations
         run: bun run db:deploy

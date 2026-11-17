@@ -31,7 +31,7 @@ Centralizar em uma única API segura:
 Pré-requisitos: [Bun](https://bun.sh) 1.3+ e [Docker](https://www.docker.com).
 
 ```bash
-# 1. Instalar dependências
+# 1. Instalar dependências (gera o Prisma Client automaticamente)
 bun install
 
 # 2. Criar o arquivo de variáveis de ambiente
@@ -40,10 +40,7 @@ cp .env.example .env
 # 3. Subir o PostgreSQL
 bun run db:up
 
-# 4. Gerar o Prisma Client
-bun run db:generate
-
-# 5. Iniciar a API em modo desenvolvimento
+# 4. Iniciar a API em modo desenvolvimento
 bun run dev
 ```
 
