@@ -17,6 +17,10 @@ const httpDefaults: Record<number, { code: string; message: string }> = {
     code: "PAYLOAD_MUITO_GRANDE",
     message: "O corpo da requisição excede o tamanho permitido.",
   },
+  415: {
+    code: "TIPO_DE_CONTEUDO_INVALIDO",
+    message: "O corpo deve ser enviado como application/json.",
+  },
   429: {
     code: "MUITAS_REQUISICOES",
     message: "Muitas requisições. Tente novamente em instantes.",

@@ -103,6 +103,17 @@ describe("errorHandler", () => {
     });
   });
 
+  it("responde 415 em português quando o Content-Type não é JSON", async () => {
+    const { status, body } = await request("/validacao", {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: '{"nome":"Ana","idade":30}',
+    });
+
+    expect(status).toBe(415);
+    expect(body.error.code).toBe("TIPO_DE_CONTEUDO_INVALIDO");
+  });
+
   it("traduz HTTPException do Hono para mensagem padrão", async () => {
     const { status, body } = await request("/http-exception");
 
