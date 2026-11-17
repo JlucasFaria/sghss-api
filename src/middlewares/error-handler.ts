@@ -27,7 +27,7 @@ const httpDefaults: Record<number, { code: string; message: string }> = {
   },
 };
 
-export const zodIssuesToDetails = (error: ZodError): ErrorDetail[] =>
+const zodIssuesToDetails = (error: ZodError): ErrorDetail[] =>
   error.issues.map((issue) => ({
     field: issue.path.join("."),
     message: issue.message,
