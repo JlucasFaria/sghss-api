@@ -1,5 +1,6 @@
 // Composição da aplicação: middlewares, rotas e documentação (sem subir servidor, para uso nos testes)
 import { swaggerUI } from "@hono/swagger-ui";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
@@ -8,6 +9,9 @@ import { env } from "./config/env";
 import { errorHandler, notFoundHandler } from "./middlewares/error-handler";
 import { requestLogger } from "./middlewares/request-logger";
 import { createRouter } from "./utils/openapi";
+
+// Limite do corpo das requisições: suficiente para os payloads JSON da API
+export const BODY_LIMIT_BYTES = 1024 * 1024;
 
 export const app = createRouter();
 
@@ -23,6 +27,8 @@ app.use(
     maxAge: 600,
   }),
 );
+// Sem onError próprio o bodyLimit lança HTTPException 413, tratada no error handler
+app.use(bodyLimit({ maxSize: BODY_LIMIT_BYTES }));
 
 app.route("/health", healthRoutes);
 

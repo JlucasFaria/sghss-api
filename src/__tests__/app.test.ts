@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { app } from "../app";
+import { BODY_LIMIT_BYTES, app } from "../app";
 
 describe("aplicação", () => {
   it("publica a especificação OpenAPI em /openapi.json", async () => {
@@ -29,6 +29,18 @@ describe("aplicação", () => {
 
     expect(generated.headers.get("x-request-id")).toBeTruthy();
     expect(forwarded.headers.get("x-request-id")).toBe("req-123");
+  });
+
+  it("rejeita corpo acima do limite com 413 padronizado", async () => {
+    const res = await app.request("/health", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto: "x".repeat(BODY_LIMIT_BYTES) }),
+    });
+    const body = (await res.json()) as { error: { code: string } };
+
+    expect(res.status).toBe(413);
+    expect(body.error.code).toBe("PAYLOAD_MUITO_GRANDE");
   });
 
   it("aplica headers de segurança nas respostas", async () => {
