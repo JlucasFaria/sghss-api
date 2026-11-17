@@ -6,7 +6,11 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 env:
+  BUN_VERSION: 1.3.14
   DATABASE_URL: postgresql://sghss:sghss@localhost:5432/sghss_test
   NODE_ENV: test
 
@@ -17,12 +21,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Instalar dependências
         run: bun install --frozen-lockfile
-
-      - name: Gerar Prisma Client
-        run: bun run db:generate
 
       - name: Prettier
         run: bun run format:check
@@ -53,12 +56,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Instalar dependências
         run: bun install --frozen-lockfile
-
-      - name: Gerar Prisma Client
-        run: bun run db:generate
 
       - name: Aplicar migrations
         run: bun run db:deploy
