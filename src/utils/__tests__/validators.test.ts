@@ -87,6 +87,24 @@ describe("safeText", () => {
     expect(safeText().safeParse("pressão < 12 por 8").success).toBe(true);
   });
 
+  it.each([
+    ["caractere nulo", "Maria\u0000"],
+    ["caractere de escape", "Maria\u001B[31m"],
+  ])("rejeita %s", (_, nome) => {
+    const result = pacienteSchema.safeParse({ nome });
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe(
+      "O texto contém caracteres inválidos.",
+    );
+  });
+
+  it("permite tabulação e quebras de linha em texto longo", () => {
+    expect(
+      safeText(500).safeParse("Evolução:\n\tpaciente estável\r\n").success,
+    ).toBe(true);
+  });
+
   it("rejeita texto vazio e acima do limite", () => {
     expect(safeText(5).safeParse("   ").success).toBe(false);
     expect(safeText(5).safeParse("123456").success).toBe(false);

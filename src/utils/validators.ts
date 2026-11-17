@@ -45,12 +45,20 @@ const HTML_PATTERN = /<[a-z!/?]/i;
 
 export const containsHtml = (value: string) => HTML_PATTERN.test(value);
 
+// Caracteres de controle (exceto tab e quebras de linha); o PostgreSQL rejeita o nulo (\u0000) em texto
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS_PATTERN = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
+
 export const safeText = (max = 255) =>
   z
     .string()
     .trim()
     .min(1, "Campo obrigatório.")
     .max(max, `Deve ter no máximo ${max} caracteres.`)
+    .refine(
+      (value) => !CONTROL_CHARS_PATTERN.test(value),
+      "O texto contém caracteres inválidos.",
+    )
     .refine(
       (value) => !containsHtml(value),
       "Não é permitido HTML ou script neste campo.",
