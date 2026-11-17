@@ -1,0 +1,26 @@
+# dependências
+node_modules
+
+# build e cobertura
+dist
+coverage
+*.lcov
+
+# variáveis de ambiente
+.env
+.env.*
+!.env.example
+
+# prisma client gerado
+/generated
+
+# logs e caches
+*.log
+.eslintcache
+*.tsbuildinfo
+
+# editores e sistema
+.idea
+.vscode
+.DS_Store
+Thumbs.db

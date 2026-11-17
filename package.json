@@ -1,0 +1,14 @@
+{
+  "name": "sghss-api",
+  "version": "0.1.0",
+  "description": "API REST do Sistema de Gestão Hospitalar e de Serviços de Saúde (SGHSS) da VidaPlus",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "typescript": "^5"
+  }
+}
