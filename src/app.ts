@@ -1,7 +1,10 @@
 // Composição da aplicação: middlewares, rotas e documentação (sem subir servidor, para uso nos testes)
 import { swaggerUI } from "@hono/swagger-ui";
+import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
+import { secureHeaders } from "hono/secure-headers";
 import { healthRoutes } from "./api/health/health.routes";
+import { env } from "./config/env";
 import { errorHandler, notFoundHandler } from "./middlewares/error-handler";
 import { requestLogger } from "./middlewares/request-logger";
 import { createRouter } from "./utils/openapi";
@@ -10,6 +13,16 @@ export const app = createRouter();
 
 app.use(requestId());
 app.use(requestLogger);
+app.use(secureHeaders());
+app.use(
+  cors({
+    origin: env.CORS_ORIGIN.includes("*") ? "*" : env.CORS_ORIGIN,
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    exposeHeaders: ["X-Request-Id"],
+    maxAge: 600,
+  }),
+);
 
 app.route("/health", healthRoutes);
 
