@@ -24,7 +24,7 @@ Referências: [requisitos](requisitos.md) · [casos de uso](casos-de-uso.md) · 
 | RF12 | UC10        | `POST /consultas/:id/cancelamento` · `POST /consultas/:id/reagendamento`                                                         | —              | Planejado |
 | RF13 | UC11        | `GET /consultas?status=&de=&ate=` · `GET /consultas/:id`                                                                         | —              | Planejado |
 | RF14 | UC12, UC13  | `POST /exames` · `GET /exames` · `GET /exames/:id` · `PATCH /exames/:id/resultado`                                               | —              | Planejado |
-| RF15 | UC14        | `POST /consultas/:id/prontuario` · `GET /consultas/:id/prontuario`                                                               | —              | Planejado |
+| RF15 | UC14        | `POST /consultas/:id/prontuario` · `GET /consultas/:id/prontuario` · `POST /consultas/:id/conclusao`                             | —              | Planejado |
 | RF16 | UC15        | `POST /consultas/:id/receitas` · `GET /receitas/:id`                                                                             | —              | Planejado |
 | RF17 | UC16        | `GET /receitas/validar/:codigo` (público, com limite de requisições)                                                             | —              | Planejado |
 | RF18 | UC17        | `POST /consultas/:id/teleconsulta`                                                                                               | —              | Planejado |

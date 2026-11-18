@@ -79,7 +79,6 @@ package "Atendimento" {
     - status : StatusConsulta
     - motivo : string
     - motivoCancelamento : string
-    + confirmar() : void
     + cancelar(motivo : string) : void
     + reagendar(novo : HorarioAgenda) : void
     + concluir() : void

@@ -298,7 +298,7 @@ legend bottom left
   Entidades em cinza são opcionais (RF30, RF31) e <b>anonimizado_em</b> atende ao RF26 opcional: modelados, implementação condicionada ao tempo.
   <b>Enums</b>: perfil (ADMIN, MEDICO, ENFERMEIRO, TECNICO, PACIENTE) · tipo_unidade (HOSPITAL, CLINICA, LABORATORIO, HOME_CARE)
   conselho (CRM, COREN) · status_horario (DISPONIVEL, RESERVADO, BLOQUEADO) · modalidade_consulta (PRESENCIAL, TELEMEDICINA)
-  status_consulta (AGENDADA, CONFIRMADA, REALIZADA, CANCELADA) · status_exame (AGENDADO, REALIZADO, CANCELADO)
+  status_consulta (AGENDADA, REALIZADA, CANCELADA) · status_exame (AGENDADO, REALIZADO, CANCELADO)
   tipo_leito (ENFERMARIA, APARTAMENTO, UTI) · status_leito (LIVRE, OCUPADO, MANUTENCAO) · tipo_movimentacao (ENTRADA, SAIDA)
   tipo_lancamento (RECEITA, DESPESA) · tipo_notificacao (CONSULTA_AGENDADA, CONSULTA_CANCELADA, LEMBRETE_CONSULTA)
 endlegend
