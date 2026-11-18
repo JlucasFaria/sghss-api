@@ -94,7 +94,6 @@ entity "consulta" as consulta {
   * id : uuid <<PK>>
   --
   * paciente_id : uuid <<FK>>
-  * profissional_id : uuid <<FK>>
   * horario_id : uuid <<FK>>
   * unidade_id : uuid <<FK>>
   * modalidade : modalidade_consulta
@@ -274,7 +273,6 @@ unidade ||--o{ suprimento
 unidade ||--o{ lancamento
 
 profissional ||--o{ horario
-profissional ||--o{ consulta
 profissional ||--o{ registro
 profissional |o--o{ exame
 

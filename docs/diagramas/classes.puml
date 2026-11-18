@@ -229,7 +229,6 @@ Unidade "1" -- "0..*" LancamentoFinanceiro
 Profissional "1" *-- "0..*" HorarioAgenda : agenda
 HorarioAgenda "1" -- "0..*" Consulta : ocupado por
 Paciente "1" -- "0..*" Consulta : agenda >
-Profissional "1" -- "0..*" Consulta : atende >
 Consulta "1" *-- "0..1" Teleconsulta
 Teleconsulta ..> ProvedorVideo : usa
 ProvedorVideoSimulado ..|> ProvedorVideo
