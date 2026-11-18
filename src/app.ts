@@ -1,7 +1,47 @@
-// Composição da aplicação: middlewares e rotas (sem subir servidor, para uso nos testes)
-import { Hono } from "hono";
+// Composição da aplicação: middlewares, rotas e documentação (sem subir servidor, para uso nos testes)
+import { swaggerUI } from "@hono/swagger-ui";
+import { bodyLimit } from "hono/body-limit";
+import { cors } from "hono/cors";
+import { requestId } from "hono/request-id";
+import { secureHeaders } from "hono/secure-headers";
 import { healthRoutes } from "./api/health/health.routes";
+import { env } from "./config/env";
+import { errorHandler, notFoundHandler } from "./middlewares/error-handler";
+import { requestLogger } from "./middlewares/request-logger";
+import { createRouter } from "./utils/openapi";
 
-export const app = new Hono();
+// Limite do corpo das requisições: suficiente para os payloads JSON da API
+export const BODY_LIMIT_BYTES = 1024 * 1024;
+
+export const app = createRouter();
+
+app.use(requestId());
+app.use(requestLogger);
+app.use(secureHeaders());
+app.use(
+  cors({
+    origin: env.CORS_ORIGIN.includes("*") ? "*" : env.CORS_ORIGIN,
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowHeaders: ["Content-Type", "Authorization"],
+    exposeHeaders: ["X-Request-Id"],
+    maxAge: 600,
+  }),
+);
+// Sem onError próprio o bodyLimit lança HTTPException 413, tratada no error handler
+app.use(bodyLimit({ maxSize: BODY_LIMIT_BYTES }));
 
 app.route("/health", healthRoutes);
+
+app.doc("/openapi.json", {
+  openapi: "3.0.0",
+  info: {
+    title: "SGHSS VidaPlus API",
+    version: "0.1.0",
+    description:
+      "API REST do Sistema de Gestão Hospitalar e de Serviços de Saúde da VidaPlus.",
+  },
+});
+app.get("/docs", swaggerUI({ url: "/openapi.json" }));
+
+app.onError(errorHandler);
+app.notFound(notFoundHandler);
