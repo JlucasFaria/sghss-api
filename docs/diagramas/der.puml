@@ -146,7 +146,7 @@ entity "prescricao" as prescricao {
   * id : uuid <<PK>>
   --
   * consulta_id : uuid <<FK>>
-  * codigo_verificacao : char(64) <<UK>>
+  * codigo_verificacao_hash : char(64) <<UK>>
     observacoes : varchar
   * emitida_em : timestamp
   * valida_ate : date

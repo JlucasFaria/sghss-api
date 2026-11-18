@@ -26,7 +26,7 @@ Referências: [requisitos](requisitos.md) · [casos de uso](casos-de-uso.md) · 
 | RF14 | UC12, UC13  | `POST /exames` · `GET /exames` · `GET /exames/:id` · `PATCH /exames/:id/resultado`                                               | —              | Planejado |
 | RF15 | UC14        | `POST /consultas/:id/prontuario` · `GET /consultas/:id/prontuario`                                                               | —              | Planejado |
 | RF16 | UC15        | `POST /consultas/:id/receitas` · `GET /receitas/:id`                                                                             | —              | Planejado |
-| RF17 | UC16        | `GET /receitas/validar/:codigo` (público)                                                                                        | —              | Planejado |
+| RF17 | UC16        | `GET /receitas/validar/:codigo` (público, com limite de requisições)                                                             | —              | Planejado |
 | RF18 | UC17        | `POST /consultas/:id/teleconsulta`                                                                                               | —              | Planejado |
 | RF19 | UC17        | `POST /consultas/:id/teleconsulta/entrada` · `POST /consultas/:id/teleconsulta/encerramento`                                     | —              | Planejado |
 | RF20 | UC19        | Gerada pelo sistema ao agendar, cancelar ou reagendar consultas (sem endpoint próprio)                                           | —              | Planejado |

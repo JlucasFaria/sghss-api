@@ -125,7 +125,7 @@ package "Prontuário e receitas" {
 
   class Prescricao {
     - id : string
-    - codigoVerificacao : string
+    - codigoVerificacaoHash : string
     - observacoes : string
     - emitidaEm : Date
     - validaAte : Date
