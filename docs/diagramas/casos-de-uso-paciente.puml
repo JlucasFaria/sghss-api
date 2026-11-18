@@ -1,0 +1,43 @@
+@startuml casos-de-uso-paciente
+!include _estilo.iuml
+title SGHSS VidaPlus — Casos de Uso do Paciente
+
+actor "Paciente" as Paciente
+actor "Provedor de Vídeo" as Provedor <<sistema externo>>
+
+rectangle "SGHSS — API" {
+  usecase "UC01 Criar conta" as UC01
+  usecase "UC20 Gerenciar consentimento" as UC20
+  usecase "UC02 Autenticar-se" as UC02
+  usecase "UC07 Manter meu cadastro" as UC07
+  usecase "UC08 Consultar histórico clínico" as UC08
+  usecase "UC09 Agendar consulta" as UC09
+  usecase "UC10 Cancelar ou reagendar consulta" as UC10
+  usecase "UC19 Notificar paciente" as UC19
+  usecase "UC11 Listar consultas" as UC11
+  usecase "UC12 Agendar exame" as UC12
+  usecase "UC17 Realizar teleconsulta" as UC17
+  usecase "UC18 Consultar notificações" as UC18
+  usecase "UC21 Exportar meus dados" as UC21
+  usecase "UC22 Anonimizar meus dados" <<opcional>> as UC22
+}
+
+Paciente -- UC22
+Paciente -- UC21
+Paciente -- UC18
+Paciente -- UC17
+Paciente -- UC12
+Paciente -- UC11
+Paciente -- UC10
+Paciente -- UC09
+Paciente -- UC08
+Paciente -- UC07
+Paciente -- UC02
+Paciente -- UC20
+Paciente -- UC01
+
+UC09 ..> UC19 : <<include>>
+UC10 ..> UC19 : <<include>>
+
+UC17 -- Provedor
+@enduml

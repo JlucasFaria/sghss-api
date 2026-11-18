@@ -1,0 +1,304 @@
+@startuml der
+title SGHSS VidaPlus — Diagrama Entidade-Relacionamento
+
+hide circle
+hide empty members
+skinparam linetype ortho
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam nodesep 60
+skinparam ranksep 70
+skinparam class {
+  BackgroundColor #F5F9FF
+  BorderColor #3B6EA5
+  ArrowColor #444444
+}
+skinparam class<<opcional>> {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+  FontColor #666666
+}
+skinparam legend {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+}
+
+' ---------- Acesso e cadastros ----------
+entity "usuario" as usuario {
+  * id : uuid <<PK>>
+  --
+  * email : varchar <<UK>>
+  * senha_hash : varchar
+  * perfil : perfil
+  * ativo : boolean
+  * criado_em : timestamp
+  * atualizado_em : timestamp
+}
+
+entity "unidade" as unidade {
+  * id : uuid <<PK>>
+  --
+  * nome : varchar
+  * tipo : tipo_unidade
+  * endereco : varchar
+  * cidade : varchar
+  * uf : char(2)
+  * ativo : boolean
+  * criado_em : timestamp
+  * atualizado_em : timestamp
+}
+
+entity "paciente" as paciente {
+  * id : uuid <<PK>>
+  --
+  * usuario_id : uuid <<FK, UK>>
+  * nome : varchar
+  * cpf_cifrado : text
+  * cpf_hash : char(64) <<UK>>
+  * data_nascimento : date
+    telefone_cifrado : text
+    anonimizado_em : timestamp
+  * criado_em : timestamp
+  * atualizado_em : timestamp
+}
+
+entity "profissional" as profissional {
+  * id : uuid <<PK>>
+  --
+  * usuario_id : uuid <<FK, UK>>
+  * unidade_id : uuid <<FK>>
+  * nome : varchar
+  * conselho : conselho
+  * registro : varchar
+    especialidade : varchar
+  * criado_em : timestamp
+  * atualizado_em : timestamp
+  ..
+  UK (conselho, registro)
+}
+
+' ---------- Agenda, consultas e exames ----------
+entity "horario_agenda" as horario {
+  * id : uuid <<PK>>
+  --
+  * profissional_id : uuid <<FK>>
+  * inicio : timestamp
+  * fim : timestamp
+  * status : status_horario
+  ..
+  UK (profissional_id, inicio)
+}
+
+entity "consulta" as consulta {
+  * id : uuid <<PK>>
+  --
+  * paciente_id : uuid <<FK>>
+  * horario_id : uuid <<FK>>
+  * unidade_id : uuid <<FK>>
+  * modalidade : modalidade_consulta
+  * status : status_consulta
+    motivo : varchar
+    motivo_cancelamento : varchar
+  * criado_em : timestamp
+  * atualizado_em : timestamp
+}
+
+entity "teleconsulta" as teleconsulta {
+  * id : uuid <<PK>>
+  --
+  * consulta_id : uuid <<FK, UK>>
+  * provedor : varchar
+  * sala_id : varchar
+  * url_sala : varchar
+    iniciada_em : timestamp
+    encerrada_em : timestamp
+  * criado_em : timestamp
+}
+
+entity "exame" as exame {
+  * id : uuid <<PK>>
+  --
+  * paciente_id : uuid <<FK>>
+  * unidade_id : uuid <<FK>>
+    responsavel_id : uuid <<FK>>
+  * tipo : varchar
+  * data_hora : timestamp
+  * status : status_exame
+    resultado_cifrado : text
+    resultado_em : timestamp
+  * criado_em : timestamp
+  * atualizado_em : timestamp
+}
+
+' ---------- Prontuário e receitas ----------
+entity "registro_prontuario" as registro {
+  * id : uuid <<PK>>
+  --
+  * consulta_id : uuid <<FK>>
+  * autor_id : uuid <<FK>>
+  * conteudo_cifrado : text
+  * criado_em : timestamp
+}
+
+entity "prescricao" as prescricao {
+  * id : uuid <<PK>>
+  --
+  * consulta_id : uuid <<FK>>
+  * codigo_verificacao_hash : char(64) <<UK>>
+    observacoes : varchar
+  * emitida_em : timestamp
+  * valida_ate : date
+}
+
+entity "item_prescricao" as item {
+  * id : uuid <<PK>>
+  --
+  * prescricao_id : uuid <<FK>>
+  * medicamento : varchar
+  * dosagem : varchar
+  * posologia : varchar
+  * quantidade : integer
+}
+
+' ---------- Administração hospitalar ----------
+entity "leito" as leito {
+  * id : uuid <<PK>>
+  --
+  * unidade_id : uuid <<FK>>
+  * codigo : varchar
+  * ala : varchar
+  * tipo : tipo_leito
+  * status : status_leito
+  * criado_em : timestamp
+  * atualizado_em : timestamp
+  ..
+  UK (unidade_id, codigo)
+}
+
+entity "internacao" as internacao {
+  * id : uuid <<PK>>
+  --
+  * paciente_id : uuid <<FK>>
+  * leito_id : uuid <<FK>>
+  * motivo : varchar
+  * admitido_em : timestamp
+    alta_em : timestamp
+  * criado_em : timestamp
+  * atualizado_em : timestamp
+}
+
+entity "suprimento" as suprimento <<opcional>> {
+  * id : uuid <<PK>>
+  --
+  * unidade_id : uuid <<FK>>
+  * nome : varchar
+  * unidade_medida : varchar
+  * quantidade : integer
+  * estoque_minimo : integer
+  * criado_em : timestamp
+  * atualizado_em : timestamp
+}
+
+entity "movimentacao_estoque" as movimentacao <<opcional>> {
+  * id : uuid <<PK>>
+  --
+  * suprimento_id : uuid <<FK>>
+  * responsavel_id : uuid <<FK>>
+  * tipo : tipo_movimentacao
+  * quantidade : integer
+    observacao : varchar
+  * criado_em : timestamp
+}
+
+entity "lancamento_financeiro" as lancamento <<opcional>> {
+  * id : uuid <<PK>>
+  --
+  * unidade_id : uuid <<FK>>
+  * tipo : tipo_lancamento
+  * categoria : varchar
+  * descricao : varchar
+  * valor : numeric(12,2)
+  * competencia : date
+  * criado_em : timestamp
+}
+
+' ---------- Notificações e compliance ----------
+entity "notificacao" as notificacao {
+  * id : uuid <<PK>>
+  --
+  * usuario_id : uuid <<FK>>
+  * tipo : tipo_notificacao
+  * titulo : varchar
+  * mensagem : varchar
+    lida_em : timestamp
+  * criado_em : timestamp
+}
+
+entity "log_auditoria" as auditoria {
+  * id : uuid <<PK>>
+  --
+    usuario_id : uuid <<FK>>
+  * acao : varchar
+  * entidade : varchar
+    entidade_id : uuid
+  * ip : varchar
+    detalhes : jsonb
+  * criado_em : timestamp
+}
+
+entity "consentimento_lgpd" as consentimento {
+  * id : uuid <<PK>>
+  --
+  * paciente_id : uuid <<FK>>
+  * finalidade : varchar
+  * versao_termo : varchar
+  * concedido_em : timestamp
+    revogado_em : timestamp
+  * ip : varchar
+}
+
+' ---------- Relacionamentos ----------
+usuario ||--o| paciente
+usuario ||--o| profissional
+usuario ||--o{ notificacao
+usuario |o--o{ auditoria
+usuario ||--o{ movimentacao
+
+unidade ||--o{ profissional
+unidade ||--o{ consulta
+unidade ||--o{ exame
+unidade ||--o{ leito
+unidade ||--o{ suprimento
+unidade ||--o{ lancamento
+
+profissional ||--o{ horario
+profissional ||--o{ registro
+profissional |o--o{ exame
+
+paciente ||--o{ consulta
+paciente ||--o{ exame
+paciente ||--o{ internacao
+paciente ||--o{ consentimento
+
+horario ||--o{ consulta
+consulta ||--o| teleconsulta
+consulta ||--o{ registro
+consulta ||--o{ prescricao
+prescricao ||--|{ item
+
+leito ||--o{ internacao
+suprimento ||--o{ movimentacao
+
+legend bottom left
+  <b>Notação</b>: pé de galinha (IE). <b>*</b> = obrigatório; <b><<UK>></b> = único.
+  Campos <b>_cifrado</b> são criptografados com AES-256-GCM; <b>cpf_hash</b> (HMAC-SHA-256) permite a busca por CPF.
+  Entidades em cinza são opcionais (RF30, RF31) e <b>anonimizado_em</b> atende ao RF26 opcional: modelados, implementação condicionada ao tempo.
+  <b>Enums</b>: perfil (ADMIN, MEDICO, ENFERMEIRO, TECNICO, PACIENTE) · tipo_unidade (HOSPITAL, CLINICA, LABORATORIO, HOME_CARE)
+  conselho (CRM, COREN) · status_horario (DISPONIVEL, RESERVADO, BLOQUEADO) · modalidade_consulta (PRESENCIAL, TELEMEDICINA)
+  status_consulta (AGENDADA, REALIZADA, CANCELADA) · status_exame (AGENDADO, REALIZADO, CANCELADO)
+  tipo_leito (ENFERMARIA, APARTAMENTO, UTI) · status_leito (LIVRE, OCUPADO, MANUTENCAO) · tipo_movimentacao (ENTRADA, SAIDA)
+  tipo_lancamento (RECEITA, DESPESA) · tipo_notificacao (CONSULTA_AGENDADA, CONSULTA_CANCELADA, LEMBRETE_CONSULTA)
+endlegend
+
+@enduml
