@@ -1,0 +1,260 @@
+@startuml classes
+title SGHSS VidaPlus — Diagrama de Classes do Domínio
+
+hide empty members
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam nodesep 50
+skinparam ranksep 60
+skinparam class {
+  BackgroundColor #F5F9FF
+  BorderColor #3B6EA5
+  ArrowColor #444444
+}
+skinparam class<<opcional>> {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+  FontColor #666666
+}
+
+package "Acesso e cadastros" {
+  class Usuario {
+    - id : string
+    - email : string
+    - senhaHash : string
+    - perfil : Perfil
+    - ativo : boolean
+    + autenticar(senha : string) : boolean
+    + inativar() : void
+  }
+
+  class Unidade {
+    - id : string
+    - nome : string
+    - tipo : TipoUnidade
+    - endereco : string
+    - cidade : string
+    - uf : string
+    - ativo : boolean
+  }
+
+  class Paciente {
+    - id : string
+    - nome : string
+    - cpf : string <<cifrado>>
+    - dataNascimento : Date
+    - telefone : string <<cifrado>>
+    - anonimizadoEm : Date
+    + historicoClinico() : HistoricoClinico
+    + exportarDados() : object
+    + anonimizar() : void
+  }
+
+  class Profissional {
+    - id : string
+    - nome : string
+    - conselho : Conselho
+    - registro : string
+    - especialidade : string
+    + abrirHorario(inicio : Date, fim : Date) : HorarioAgenda
+    + bloquearHorario(horario : HorarioAgenda) : void
+    + agendaDoDia(dia : Date) : HorarioAgenda[]
+  }
+}
+
+package "Atendimento" {
+  class HorarioAgenda {
+    - id : string
+    - inicio : Date
+    - fim : Date
+    - status : StatusHorario
+    + reservar() : void
+    + liberar() : void
+  }
+
+  class Consulta {
+    - id : string
+    - modalidade : ModalidadeConsulta
+    - status : StatusConsulta
+    - motivo : string
+    - motivoCancelamento : string
+    + confirmar() : void
+    + cancelar(motivo : string) : void
+    + reagendar(novo : HorarioAgenda) : void
+    + concluir() : void
+  }
+
+  class Teleconsulta {
+    - id : string
+    - provedor : string
+    - salaId : string
+    - urlSala : string
+    - iniciadaEm : Date
+    - encerradaEm : Date
+    + gerarAcesso(usuario : Usuario) : string
+    + encerrar() : void
+  }
+
+  interface ProvedorVideo <<porta>> {
+    + criarSala(consultaId : string) : SalaVideo
+    + gerarToken(salaId : string, participante : string) : string
+    + encerrarSala(salaId : string) : void
+  }
+
+  class ProvedorVideoSimulado <<adaptador>>
+
+  class Exame {
+    - id : string
+    - tipo : string
+    - dataHora : Date
+    - status : StatusExame
+    - resultado : string <<cifrado>>
+    - resultadoEm : Date
+    + registrarResultado(resultado : string) : void
+    + cancelar() : void
+  }
+}
+
+package "Prontuário e receitas" {
+  class RegistroProntuario {
+    - id : string
+    - conteudo : string <<cifrado>>
+    - criadoEm : Date
+  }
+
+  class Prescricao {
+    - id : string
+    - codigoVerificacao : string
+    - observacoes : string
+    - emitidaEm : Date
+    - validaAte : Date
+    + gerarCodigoVerificacao() : string
+    + estaValida(data : Date) : boolean
+  }
+
+  class ItemPrescricao {
+    - medicamento : string
+    - dosagem : string
+    - posologia : string
+    - quantidade : number
+  }
+}
+
+package "Administração hospitalar" {
+  class Leito {
+    - id : string
+    - codigo : string
+    - ala : string
+    - tipo : TipoLeito
+    - status : StatusLeito
+    + ocupar() : void
+    + liberar() : void
+  }
+
+  class Internacao {
+    - id : string
+    - motivo : string
+    - admitidoEm : Date
+    - altaEm : Date
+    + transferir(destino : Leito) : void
+    + darAlta() : void
+  }
+
+  class Suprimento <<opcional>> {
+    - nome : string
+    - unidadeMedida : string
+    - quantidade : number
+    - estoqueMinimo : number
+    + registrarEntrada(qtd : number) : void
+    + registrarSaida(qtd : number) : void
+    + abaixoDoMinimo() : boolean
+  }
+
+  class MovimentacaoEstoque <<opcional>> {
+    - tipo : TipoMovimentacao
+    - quantidade : number
+    - observacao : string
+  }
+
+  class LancamentoFinanceiro <<opcional>> {
+    - tipo : TipoLancamento
+    - categoria : string
+    - descricao : string
+    - valor : Decimal
+    - competencia : Date
+  }
+}
+
+package "Notificações e compliance" {
+  class Notificacao {
+    - tipo : TipoNotificacao
+    - titulo : string
+    - mensagem : string
+    - lidaEm : Date
+    + marcarComoLida() : void
+  }
+
+  class LogAuditoria {
+    - acao : string
+    - entidade : string
+    - entidadeId : string
+    - ip : string
+    - detalhes : object
+    - criadoEm : Date
+  }
+
+  class ConsentimentoLgpd {
+    - finalidade : string
+    - versaoTermo : string
+    - concedidoEm : Date
+    - revogadoEm : Date
+    - ip : string
+    + revogar() : void
+  }
+}
+
+' ---------- Associações ----------
+Usuario "1" -- "0..1" Paciente : possui perfil >
+Usuario "1" -- "0..1" Profissional : possui perfil >
+Usuario "1" -- "0..*" Notificacao : recebe >
+Usuario "0..1" -- "0..*" LogAuditoria : executa >
+
+Unidade "1" o-- "0..*" Profissional : lota
+Unidade "1" *-- "0..*" Leito
+Unidade "1" -- "0..*" Consulta : sedia
+Unidade "1" -- "0..*" Exame : realiza
+Unidade "1" *-- "0..*" Suprimento
+Unidade "1" -- "0..*" LancamentoFinanceiro
+
+Profissional "1" *-- "0..*" HorarioAgenda : agenda
+HorarioAgenda "1" -- "0..*" Consulta : ocupado por
+Paciente "1" -- "0..*" Consulta : agenda >
+Profissional "1" -- "0..*" Consulta : atende >
+Consulta "1" *-- "0..1" Teleconsulta
+Teleconsulta ..> ProvedorVideo : usa
+ProvedorVideoSimulado ..|> ProvedorVideo
+
+Paciente "1" -- "0..*" Exame
+Profissional "0..1" -- "0..*" Exame : registra resultado >
+
+Consulta "1" *-- "0..*" RegistroProntuario
+Profissional "1" -- "0..*" RegistroProntuario : escreve >
+Consulta "1" -- "0..*" Prescricao : origina >
+Prescricao "1" *-- "1..*" ItemPrescricao
+
+Paciente "1" -- "0..*" Internacao
+Leito "1" -- "0..*" Internacao : abriga >
+Suprimento "1" *-- "0..*" MovimentacaoEstoque
+Usuario "1" -- "0..*" MovimentacaoEstoque : registra >
+
+Paciente "1" *-- "0..*" ConsentimentoLgpd : concede >
+
+legend bottom left
+  Atributos <b><<cifrado>></b> são persistidos criptografados (AES-256-GCM) e decifrados no serviço.
+  Tipos enumerados (Perfil, StatusConsulta, StatusLeito etc.) e seus valores estão na legenda do DER.
+  <b>ProvedorVideo</b> é uma porta (interface): o adaptador simulado pode ser trocado por um provedor real.
+  Classes em cinza são opcionais (RF30, RF31).
+endlegend
+
+@enduml
