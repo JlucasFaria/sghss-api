@@ -46,7 +46,7 @@ package "Acesso e cadastros" {
     - dataNascimento : Date
     - telefone : string <<cifrado>>
     - anonimizadoEm : Date
-    + historicoClinico() : HistoricoClinico
+    + historicoClinico() : object
     + exportarDados() : object
     + anonimizar() : void
   }
@@ -96,7 +96,7 @@ package "Atendimento" {
   }
 
   interface ProvedorVideo <<porta>> {
-    + criarSala(consultaId : string) : SalaVideo
+    + criarSala(consultaId : string) : object
     + gerarToken(salaId : string, participante : string) : string
     + encerrarSala(salaId : string) : void
   }
