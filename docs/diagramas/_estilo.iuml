@@ -1,0 +1,21 @@
+' Estilo comum aos diagramas de casos de uso
+left to right direction
+skinparam actorStyle awesome
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 13
+skinparam rectangle {
+  BorderColor #3B6EA5
+  FontStyle bold
+}
+skinparam usecase {
+  BackgroundColor #F5F9FF
+  BorderColor #3B6EA5
+  ArrowColor #444444
+}
+skinparam usecase<<opcional>> {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+  FontColor #666666
+  BorderStyle dashed
+}

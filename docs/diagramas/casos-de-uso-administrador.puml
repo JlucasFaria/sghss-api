@@ -1,0 +1,30 @@
+@startuml casos-de-uso-administrador
+!include _estilo.iuml
+title SGHSS VidaPlus — Casos de Uso do Administrador
+
+actor "Administrador" as Admin
+
+rectangle "SGHSS — API" {
+  usecase "UC28 Gerenciar financeiro" <<opcional>> as UC28
+  usecase "UC27 Controlar estoque" <<opcional>> as UC27
+  usecase "UC26 Gerar relatórios gerenciais" as UC26
+  usecase "UC25 Gerenciar internações" as UC25
+  usecase "UC24 Gerenciar leitos" as UC24
+  usecase "UC23 Consultar auditoria" as UC23
+  usecase "UC06 Gerenciar pacientes" as UC06
+  usecase "UC04 Gerenciar profissionais" as UC04
+  usecase "UC03 Gerenciar unidades" as UC03
+  usecase "UC02 Autenticar-se" as UC02
+}
+
+Admin -- UC02
+Admin -- UC03
+Admin -- UC04
+Admin -- UC06
+Admin -- UC23
+Admin -- UC24
+Admin -- UC25
+Admin -- UC26
+Admin -- UC27
+Admin -- UC28
+@enduml
