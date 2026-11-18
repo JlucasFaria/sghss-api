@@ -1,6 +1,6 @@
 # Requisitos do SGHSS — VidaPlus
 
-Levantamento dos requisitos funcionais (RF) e não funcionais (RNF) do Sistema de Gestão Hospitalar e de Serviços de Saúde (SGHSS) da VidaPlus, derivados do estudo de caso. É a base do diagrama de casos de uso, do DER, dos endpoints da API e do plano de testes (ver `docs/rastreabilidade.md`).
+Levantamento dos requisitos funcionais (RF) e não funcionais (RNF) do Sistema de Gestão Hospitalar e de Serviços de Saúde (SGHSS) da VidaPlus, derivados do estudo de caso. É a base do diagrama de casos de uso, do DER, dos endpoints da API e do plano de testes (ver [rastreabilidade](rastreabilidade.md)).
 
 ## Contexto e recorte
 
