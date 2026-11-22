@@ -118,6 +118,7 @@ model Profissional {
   registros RegistroProntuario[]
 
   @@unique([conselho, registro])
+  @@index([unidadeId])
   @@map("profissional")
 }
 
@@ -166,6 +167,7 @@ model HorarioAgenda {
   consultas    Consulta[]
 
   @@unique([profissionalId, inicio])
+  @@index([inicio])
   @@map("horario_agenda")
 }
 
@@ -190,6 +192,9 @@ model Consulta {
   registros    RegistroProntuario[]
   prescricoes  Prescricao[]
 
+  @@index([pacienteId, status])
+  @@index([horarioId])
+  @@index([unidadeId, status])
   @@map("consulta")
 }
 
@@ -226,6 +231,9 @@ model Exame {
   unidade     Unidade       @relation(fields: [unidadeId], references: [id])
   responsavel Profissional? @relation(fields: [responsavelId], references: [id])
 
+  @@index([pacienteId])
+  @@index([unidadeId, dataHora])
+  @@index([responsavelId])
   @@map("exame")
 }
 
@@ -243,6 +251,8 @@ model RegistroProntuario {
   consulta Consulta     @relation(fields: [consultaId], references: [id])
   autor    Profissional @relation(fields: [autorId], references: [id])
 
+  @@index([consultaId])
+  @@index([autorId])
   @@map("registro_prontuario")
 }
 
@@ -258,6 +268,7 @@ model Prescricao {
   consulta Consulta         @relation(fields: [consultaId], references: [id])
   itens    ItemPrescricao[]
 
+  @@index([consultaId])
   @@map("prescricao")
 }
 
@@ -271,6 +282,7 @@ model ItemPrescricao {
 
   prescricao Prescricao @relation(fields: [prescricaoId], references: [id], onDelete: Cascade)
 
+  @@index([prescricaoId])
   @@map("item_prescricao")
 }
 
@@ -331,6 +343,8 @@ model Internacao {
   paciente Paciente @relation(fields: [pacienteId], references: [id])
   leito    Leito    @relation(fields: [leitoId], references: [id])
 
+  @@index([pacienteId])
+  @@index([leitoId])
   @@map("internacao")
 }
 
@@ -348,6 +362,7 @@ model Suprimento {
   unidade       Unidade               @relation(fields: [unidadeId], references: [id])
   movimentacoes MovimentacaoEstoque[]
 
+  @@index([unidadeId])
   @@map("suprimento")
 }
 
@@ -363,6 +378,8 @@ model MovimentacaoEstoque {
   suprimento  Suprimento @relation(fields: [suprimentoId], references: [id])
   responsavel Usuario    @relation(fields: [responsavelId], references: [id])
 
+  @@index([suprimentoId])
+  @@index([responsavelId])
   @@map("movimentacao_estoque")
 }
 
@@ -386,6 +403,7 @@ model LancamentoFinanceiro {
 
   unidade Unidade @relation(fields: [unidadeId], references: [id])
 
+  @@index([unidadeId, competencia])
   @@map("lancamento_financeiro")
 }
 
@@ -410,6 +428,7 @@ model Notificacao {
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
+  @@index([usuarioId, criadoEm])
   @@map("notificacao")
 }
 
@@ -427,6 +446,9 @@ model LogAuditoria {
 
   usuario Usuario? @relation(fields: [usuarioId], references: [id])
 
+  @@index([usuarioId, criadoEm])
+  @@index([acao, criadoEm])
+  @@index([criadoEm])
   @@map("log_auditoria")
 }
 
@@ -442,5 +464,6 @@ model ConsentimentoLgpd {
 
   paciente Paciente @relation(fields: [pacienteId], references: [id])
 
+  @@index([pacienteId])
   @@map("consentimento_lgpd")
 }
