@@ -15,8 +15,8 @@ import {
 } from "../auditoria/auditoria.service";
 import type { RegistrarEvolucaoInput } from "./prontuario.schema";
 
-// Dados da consulta usados nas regras de acesso do prontuário
-async function buscarConsulta(id: string, db: Prisma.TransactionClient) {
+// Dados da consulta usados nas regras de acesso do prontuário e das receitas
+export async function buscarConsulta(id: string, db: Prisma.TransactionClient) {
   const consulta = await db.consulta.findUnique({
     where: { id },
     select: {
@@ -60,7 +60,7 @@ async function profissionalComAcesso(
   return profissional;
 }
 
-const exigirConsultaIniciada = (consulta: ConsultaDoProntuario) => {
+export const exigirConsultaIniciada = (consulta: ConsultaDoProntuario) => {
   if (consulta.status === StatusConsulta.CANCELADA) {
     throw conflict("Consulta cancelada não recebe registros clínicos.");
   }
@@ -121,15 +121,20 @@ export function registrarEvolucao(
 
 // O paciente lê o próprio prontuário (direito do titular); os profissionais da
 // unidade também, e essa leitura é auditada. O ADMIN é barrado pelo RBAC da rota.
-export async function listarEvolucoes(consultaId: string, ator: Ator) {
+// Leitura de dado clínico da consulta: o paciente dela, o profissional da consulta
+// ou um profissional da unidade. Usada pelo prontuário e pelas receitas.
+export async function exigirLeituraClinica(consultaId: string, ator: Ator) {
   const consulta = await buscarConsulta(consultaId, prisma);
-
-  if (ator.perfil === Perfil.PACIENTE) {
-    if (consulta.paciente.usuarioId !== ator.usuarioId) {
-      throw notFound("Consulta não encontrada.");
-    }
-  } else {
+  if (ator.perfil !== Perfil.PACIENTE) {
     await profissionalComAcesso(consulta, ator, prisma);
+  } else if (consulta.paciente.usuarioId !== ator.usuarioId) {
+    throw notFound("Consulta não encontrada.");
+  }
+}
+
+export async function listarEvolucoes(consultaId: string, ator: Ator) {
+  await exigirLeituraClinica(consultaId, ator);
+  if (ator.perfil !== Perfil.PACIENTE) {
     await registrarAuditoria({
       ...ator,
       acao: AcaoAuditoria.PRONTUARIO_CONSULTADO,
