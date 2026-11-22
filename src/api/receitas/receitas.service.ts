@@ -48,11 +48,11 @@ export const selecaoReceita = {
   },
 } satisfies Prisma.PrescricaoSelect;
 
-export type ReceitaSelecionada = Prisma.PrescricaoGetPayload<{
+type ReceitaSelecionada = Prisma.PrescricaoGetPayload<{
   select: typeof selecaoReceita;
 }>;
 
-export const paraResposta = ({
+const paraResposta = ({
   consulta,
   validaAte,
   ...receita

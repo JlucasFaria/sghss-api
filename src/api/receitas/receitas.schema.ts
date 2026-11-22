@@ -76,3 +76,35 @@ export const receitaEmitidaSchema = receitaSchema
 
 export type EmitirReceitaInput = z.infer<typeof emitirReceitaSchema>;
 export type ReceitaResponse = z.infer<typeof receitaSchema>;
+
+// Código de verificação vai no corpo, nunca na URL (que fica em logs e históricos)
+export const validarReceitaSchema = z
+  .object({
+    codigo: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9_-]{43}$/, "Código de verificação inválido.")
+      .openapi({ example: "q3Zx8b1yK0nV2mT5rL7wP9sD4fG6hJ1kA3cE5vB7nM0" }),
+  })
+  .openapi("ReceitaValidacaoEntrada");
+
+// Só o necessário para a farmácia conferir e dispensar: sem dados clínicos da
+// consulta e com o nome do paciente abreviado
+export const validacaoReceitaSchema = z
+  .object({
+    situacao: z.enum(["VALIDA", "EXPIRADA"]),
+    emitidaEm: z.date(),
+    validaAte: z.iso.date(),
+    itens: receitaSchema.shape.itens,
+    medico: z.object({
+      nome: z.string(),
+      conselho: z.enum(Conselho),
+      registro: z.string(),
+    }),
+    paciente: z.object({
+      nome: z.string().openapi({ example: "Ana P. R." }),
+    }),
+  })
+  .openapi("ReceitaValidacao");
+
+export type ValidacaoReceita = z.infer<typeof validacaoReceitaSchema>;

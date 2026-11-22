@@ -1,8 +1,11 @@
-// Rotas de receitas: emissão em /consultas/{id}/receitas e consulta em /receitas/{id}
+// Rotas de receitas: emissão em /consultas/{id}/receitas, consulta em /receitas/{id}
+// e validação pública pela farmácia em /receitas/validacao
 import { createRoute } from "@hono/zod-openapi";
 import { Perfil } from "../../../generated/prisma/client";
 import { authenticate, requireRole } from "../../middlewares/auth";
+import { rateLimit } from "../../middlewares/rate-limit";
 import { getAtor } from "../../utils/ator";
+import { getClientIp } from "../../utils/client-ip";
 import {
   createRouter,
   errorResponses,
@@ -14,8 +17,11 @@ import {
   emitirReceitaSchema,
   receitaEmitidaSchema,
   receitaSchema,
+  validacaoReceitaSchema,
+  validarReceitaSchema,
 } from "./receitas.schema";
 import { emitirReceita, obterReceita } from "./receitas.service";
+import { validarReceita } from "./validacao.service";
 
 const base = { tags: ["Receitas"], security: [{ bearerAuth: [] }] };
 
@@ -66,6 +72,33 @@ const obterRoute = createRoute({
   },
 });
 
+// Rota pública: 30 validações a cada 15 minutos por IP, para impedir tentativas em massa
+export const validacaoRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  key: (c) => getClientIp(c),
+});
+
+const validarRoute = createRoute({
+  method: "post",
+  path: "/validacao",
+  tags: ["Receitas"],
+  summary: "Valida a autenticidade de uma receita (farmácia, sem login)",
+  description:
+    "O código vai no corpo, nunca na URL. A resposta traz só o necessário para a dispensação, com o nome do paciente abreviado.",
+  middleware: [validacaoRateLimit],
+  request: {
+    body: { required: true, content: jsonContent(validarReceitaSchema) },
+  },
+  responses: {
+    200: {
+      description: "Receita encontrada (válida ou expirada)",
+      content: jsonContent(dataResponseSchema(validacaoReceitaSchema)),
+    },
+    ...errorResponses(400, 404, 429),
+  },
+});
+
 // Montado em /consultas
 export const emissaoReceitaRoutes = createRouter().openapi(
   emitirRoute,
@@ -80,7 +113,15 @@ export const emissaoReceitaRoutes = createRouter().openapi(
 );
 
 // Montado em /receitas
-export const receitasRoutes = createRouter().openapi(obterRoute, async (c) => {
-  const receita = await obterReceita(c.req.valid("param").id, getAtor(c));
-  return c.json({ data: receita }, 200);
-});
+export const receitasRoutes = createRouter()
+  .openapi(validarRoute, async (c) => {
+    const validacao = await validarReceita(
+      c.req.valid("json").codigo,
+      getClientIp(c),
+    );
+    return c.json({ data: validacao }, 200);
+  })
+  .openapi(obterRoute, async (c) => {
+    const receita = await obterReceita(c.req.valid("param").id, getAtor(c));
+    return c.json({ data: receita }, 200);
+  });
