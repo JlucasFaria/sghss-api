@@ -98,3 +98,11 @@ export const dataNascimentoSchema = z.iso
     "Data de nascimento inválida.",
   )
   .openapi({ type: "string", format: "date", example: "1990-05-20" });
+
+// Data e hora ISO 8601 com fuso (ex.: 2026-12-01T09:00:00-03:00), convertida para Date
+export const dataHoraSchema = z.iso
+  .datetime({
+    offset: true,
+    ...mensagem("Data e hora inválidas. Use ISO 8601 com fuso."),
+  })
+  .transform((value) => new Date(value));
