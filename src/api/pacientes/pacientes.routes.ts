@@ -14,6 +14,8 @@ import {
   paginationQuerySchema,
 } from "../../utils/pagination";
 import { dataResponseSchema } from "../../utils/response";
+import { historicoSchema } from "./historico.schema";
+import { historicoDoPaciente, meuHistorico } from "./historico.service";
 import {
   atualizarPacienteSchema,
   atualizarPerfilSchema,
@@ -34,6 +36,15 @@ import {
 const base = { tags: ["Pacientes"], security: [{ bearerAuth: [] }] };
 const somenteAdmin = [authenticate, requireRole(Perfil.ADMIN)];
 const somentePaciente = [authenticate, requireRole(Perfil.PACIENTE)];
+// ADMIN gere cadastros e não acessa dados clínicos (minimização, LGPD)
+const profissionaisDeSaude = [
+  authenticate,
+  requireRole(Perfil.MEDICO, Perfil.ENFERMEIRO, Perfil.TECNICO),
+];
+const historicoResponse = {
+  description: "Histórico clínico",
+  content: jsonContent(dataResponseSchema(historicoSchema)),
+};
 const pacienteResponse = {
   description: "Paciente com dados completos",
   content: jsonContent(dataResponseSchema(pacienteSchema)),
@@ -89,6 +100,28 @@ const atualizarMeuPerfilRoute = createRoute({
     body: { required: true, content: jsonContent(atualizarPerfilSchema) },
   },
   responses: { 200: pacienteResponse, ...errorResponses(400, 401, 403, 404) },
+});
+
+const meuHistoricoRoute = createRoute({
+  ...base,
+  method: "get",
+  path: "/me/historico",
+  summary: "Histórico clínico do paciente autenticado",
+  description: "Consultas, exames, prescrições e internações.",
+  middleware: somentePaciente,
+  responses: { 200: historicoResponse, ...errorResponses(401, 403, 404) },
+});
+
+const historicoRoute = createRoute({
+  ...base,
+  method: "get",
+  path: "/{id}/historico",
+  summary: "Histórico clínico de um paciente atendido pelo profissional",
+  description:
+    "Só para o profissional com consulta agendada ou realizada com o paciente, ou responsável por um exame dele. O acesso é auditado.",
+  middleware: profissionaisDeSaude,
+  request: { params: idParamSchema },
+  responses: { 200: historicoResponse, ...errorResponses(400, 401, 403, 404) },
 });
 
 const obterRoute = createRoute({
@@ -149,6 +182,17 @@ export const pacientesRoutes = createRouter()
   .openapi(atualizarMeuPerfilRoute, async (c) => {
     const paciente = await atualizarMeuPerfil(c.req.valid("json"), getAtor(c));
     return c.json({ data: paciente }, 200);
+  })
+  .openapi(meuHistoricoRoute, async (c) => {
+    const historico = await meuHistorico(c.get("usuario").id);
+    return c.json({ data: historico }, 200);
+  })
+  .openapi(historicoRoute, async (c) => {
+    const historico = await historicoDoPaciente(
+      c.req.valid("param").id,
+      getAtor(c),
+    );
+    return c.json({ data: historico }, 200);
   })
   .openapi(obterRoute, async (c) => {
     const paciente = await obterPaciente(c.req.valid("param").id, getAtor(c));
