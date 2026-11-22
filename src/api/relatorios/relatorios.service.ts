@@ -1,12 +1,18 @@
 // Relatórios gerenciais (RF29): agregações feitas no banco (groupBy), sem carregar
 // registros individuais nem dados pessoais
-import type { StatusLeito } from "../../../generated/prisma/client";
+import {
+  Prisma,
+  TipoLancamento,
+  type StatusLeito,
+} from "../../../generated/prisma/client";
 import { prisma } from "../../db/client";
 import { intervaloDoDia } from "../../utils/datas";
+import { filtroCompetencia } from "../financeiro/financeiro.service";
 import type {
-  ConsultasQuery,
+  PeriodoQuery,
   OcupacaoQuery,
   RelatorioConsultas,
+  RelatorioFinanceiro,
   RelatorioOcupacao,
 } from "./relatorios.schema";
 
@@ -89,7 +95,7 @@ export async function relatorioConsultas({
   de,
   ate,
   unidadeId,
-}: ConsultasQuery): Promise<RelatorioConsultas> {
+}: PeriodoQuery): Promise<RelatorioConsultas> {
   const grupos = await prisma.consulta.groupBy({
     by: ["unidadeId", "status", "modalidade"],
     where: {
@@ -124,5 +130,55 @@ export async function relatorioConsultas({
       ...(porUnidade.get(unidade.id) ?? contagemVazia()),
     })),
     total,
+  };
+}
+
+// ---------- Resumo financeiro (RF31) ----------
+
+type Totais = { receitas: Prisma.Decimal; despesas: Prisma.Decimal };
+
+const totaisVazios = (): Totais => ({
+  receitas: new Prisma.Decimal(0),
+  despesas: new Prisma.Decimal(0),
+});
+
+// Soma em Decimal (sem erro de ponto flutuante) e formata com 2 casas
+const paraResumo = ({ receitas, despesas }: Totais) => ({
+  receitas: receitas.toFixed(2),
+  despesas: despesas.toFixed(2),
+  saldo: receitas.minus(despesas).toFixed(2),
+});
+
+// Lançamentos cuja competência cai no período, somados por unidade e tipo
+export async function relatorioFinanceiro({
+  de,
+  ate,
+  unidadeId,
+}: PeriodoQuery): Promise<RelatorioFinanceiro> {
+  const grupos = await prisma.lancamentoFinanceiro.groupBy({
+    by: ["unidadeId", "tipo"],
+    where: { unidadeId, competencia: filtroCompetencia(de, ate) },
+    _sum: { valor: true },
+  });
+
+  const porUnidade = new Map<string, Totais>();
+  const total = totaisVazios();
+  for (const { unidadeId, tipo, _sum } of grupos) {
+    const totais = porUnidade.get(unidadeId) ?? totaisVazios();
+    porUnidade.set(unidadeId, totais);
+    const campo = tipo === TipoLancamento.RECEITA ? "receitas" : "despesas";
+    const valor = _sum.valor ?? new Prisma.Decimal(0);
+    totais[campo] = totais[campo].plus(valor);
+    total[campo] = total[campo].plus(valor);
+  }
+
+  const unidades = await buscarUnidades([...porUnidade.keys()]);
+  return {
+    periodo: { de, ate },
+    unidades: unidades.map((unidade) => ({
+      unidade,
+      ...paraResumo(porUnidade.get(unidade.id) ?? totaisVazios()),
+    })),
+    total: paraResumo(total),
   };
 }

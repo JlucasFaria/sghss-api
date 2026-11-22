@@ -6,6 +6,8 @@ import {
 } from "../../../generated/prisma/client";
 import { comPeriodoValido, dataSchema, mensagem } from "../../utils/validators";
 
+import { valorMonetarioSchema } from "../financeiro/financeiro.schema";
+
 const referencia = z.object({ id: z.uuid(), nome: z.string() });
 const unidadeIdSchema = z.uuid(mensagem("Identificador inválido.")).optional();
 
@@ -29,7 +31,7 @@ export const relatorioOcupacaoSchema = z
   .openapi("RelatorioOcupacaoLeitos");
 
 // Período obrigatório: um relatório sem recorte de datas cresceria sem limite
-export const consultasQuerySchema = comPeriodoValido(
+export const periodoQuerySchema = comPeriodoValido(
   z.object({
     de: dataSchema.openapi({ example: "2026-12-01" }),
     ate: dataSchema.openapi({ example: "2026-12-31" }),
@@ -51,7 +53,23 @@ export const relatorioConsultasSchema = z
   })
   .openapi("RelatorioConsultas");
 
+const resumoFinanceiroSchema = z.object({
+  receitas: valorMonetarioSchema,
+  despesas: valorMonetarioSchema,
+  // Receitas menos despesas; negativo quando há prejuízo
+  saldo: valorMonetarioSchema,
+});
+
+export const relatorioFinanceiroSchema = z
+  .object({
+    periodo: z.object({ de: z.iso.date(), ate: z.iso.date() }),
+    unidades: z.array(resumoFinanceiroSchema.extend({ unidade: referencia })),
+    total: resumoFinanceiroSchema,
+  })
+  .openapi("RelatorioFinanceiro");
+
 export type OcupacaoQuery = z.infer<typeof ocupacaoQuerySchema>;
-export type ConsultasQuery = z.infer<typeof consultasQuerySchema>;
+export type PeriodoQuery = z.infer<typeof periodoQuerySchema>;
 export type RelatorioOcupacao = z.infer<typeof relatorioOcupacaoSchema>;
 export type RelatorioConsultas = z.infer<typeof relatorioConsultasSchema>;
+export type RelatorioFinanceiro = z.infer<typeof relatorioFinanceiroSchema>;
