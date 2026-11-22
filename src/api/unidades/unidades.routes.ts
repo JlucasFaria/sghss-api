@@ -97,7 +97,7 @@ const inativarRoute = createRoute({
   path: "/{id}",
   summary: "Inativa uma unidade",
   description:
-    "Inativação lógica: os registros vinculados são preservados. Recusada (409) se houver consultas futuras agendadas.",
+    "Inativação lógica: os registros vinculados são preservados. Recusada (409) se houver consultas futuras agendadas ou pacientes internados.",
   middleware: somenteAdmin,
   request: { params: idParamSchema },
   responses: {

@@ -113,3 +113,20 @@ export const dataHoraSchema = z.iso
 export const seSemErros = {
   when: (payload: { issues: unknown[] }) => payload.issues.length === 0,
 };
+
+// Data AAAA-MM-DD dos filtros de período (mantida como texto; o serviço converte)
+export const dataSchema = z.iso.date(
+  mensagem("Data inválida. Use o formato AAAA-MM-DD."),
+);
+
+// Período de/ate ("ate" inclusivo): a data final não pode ser anterior à inicial
+export const comPeriodoValido = <
+  T extends z.ZodType<{ de?: string; ate?: string }>,
+>(
+  schema: T,
+) =>
+  schema.refine(({ de, ate }) => !de || !ate || de <= ate, {
+    path: ["ate"],
+    message: "A data final deve ser igual ou posterior à inicial.",
+    ...seSemErros,
+  });

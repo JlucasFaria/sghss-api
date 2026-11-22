@@ -5,7 +5,12 @@ import {
   StatusConsulta,
 } from "../../../generated/prisma/client";
 import { paginationQuerySchema } from "../../utils/pagination";
-import { mensagem, safeText, seSemErros } from "../../utils/validators";
+import {
+  comPeriodoValido,
+  dataSchema,
+  mensagem,
+  safeText,
+} from "../../utils/validators";
 
 const referencia = z.object({ id: z.uuid(), nome: z.string() });
 
@@ -54,23 +59,15 @@ export const reagendarConsultaSchema = z
 export type CancelarConsultaInput = z.infer<typeof cancelarConsultaSchema>;
 export type ReagendarConsultaInput = z.infer<typeof reagendarConsultaSchema>;
 
-const dataFiltro = z.iso
-  .date(mensagem("Data inválida. Use o formato AAAA-MM-DD."))
-  .optional();
-
 // Datas no horário de Brasília; "ate" é inclusivo
-export const listarConsultasQuerySchema = paginationQuerySchema
-  .extend({
+export const listarConsultasQuerySchema = comPeriodoValido(
+  paginationQuerySchema.extend({
     status: z.enum(StatusConsulta).optional(),
-    de: dataFiltro.openapi({ example: "2026-12-01" }),
-    ate: dataFiltro.openapi({ example: "2026-12-31" }),
+    de: dataSchema.optional().openapi({ example: "2026-12-01" }),
+    ate: dataSchema.optional().openapi({ example: "2026-12-31" }),
     pacienteId: z.uuid(mensagem("Identificador inválido.")).optional(),
     profissionalId: z.uuid(mensagem("Identificador inválido.")).optional(),
-  })
-  .refine(({ de, ate }) => !de || !ate || de <= ate, {
-    path: ["ate"],
-    message: "A data final deve ser igual ou posterior à inicial.",
-    ...seSemErros,
-  });
+  }),
+);
 
 export type ListarConsultasQuery = z.infer<typeof listarConsultasQuerySchema>;

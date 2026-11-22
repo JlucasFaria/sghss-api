@@ -45,6 +45,9 @@ const router = createRouter()
   .get("/prisma-unique", () => {
     throw prismaError("P2002");
   })
+  .get("/prisma-fk", () => {
+    throw prismaError("P2003");
+  })
   .get("/prisma-not-found", () => {
     throw prismaError("P2025");
   })
@@ -129,6 +132,13 @@ describe("errorHandler", () => {
 
   it("mapeia violação de unicidade do Prisma (P2002) para 409", async () => {
     const { status, body } = await request("/prisma-unique");
+
+    expect(status).toBe(409);
+    expect(body.error.code).toBe("CONFLITO");
+  });
+
+  it("mapeia violação de chave estrangeira do Prisma (P2003) para 409", async () => {
+    const { status, body } = await request("/prisma-fk");
 
     expect(status).toBe(409);
     expect(body.error.code).toBe("CONFLITO");

@@ -61,6 +61,15 @@ const toAppError = (err: Error): AppError | undefined => {
         "Já existe um registro com estes dados.",
       );
     }
+    // Chave estrangeira: o registro passou a ser referenciado por outro (ex.: um leito
+    // que recebeu internação entre a checagem e a exclusão)
+    if (err.code === "P2003") {
+      return new AppError(
+        409,
+        "CONFLITO",
+        "O registro está vinculado a outros dados.",
+      );
+    }
     if (err.code === "P2025") {
       return new AppError(404, "NAO_ENCONTRADO", "Registro não encontrado.");
     }
