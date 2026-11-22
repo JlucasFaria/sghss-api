@@ -1,4 +1,4 @@
-// Rotas de consultas: agendamento, cancelamento e reagendamento
+// Rotas de consultas: agendamento, cancelamento, reagendamento e listagem
 import { createRoute } from "@hono/zod-openapi";
 import { Perfil } from "../../../generated/prisma/client";
 import { authenticate, requireRole } from "../../middlewares/auth";
@@ -9,16 +9,20 @@ import {
   idParamSchema,
   jsonContent,
 } from "../../utils/openapi";
+import { paginatedResponseSchema } from "../../utils/pagination";
 import { dataResponseSchema } from "../../utils/response";
 import {
   agendarConsultaSchema,
   cancelarConsultaSchema,
   consultaSchema,
+  listarConsultasQuerySchema,
   reagendarConsultaSchema,
 } from "./consultas.schema";
 import {
   agendarConsulta,
   cancelarConsulta,
+  listarConsultas,
+  obterConsulta,
   reagendarConsulta,
 } from "./consultas.service";
 
@@ -81,7 +85,44 @@ const reagendarRoute = createRoute({
   },
 });
 
+const listarRoute = createRoute({
+  ...base,
+  method: "get",
+  path: "/",
+  summary: "Lista consultas (paginado), com filtros de status e período",
+  description:
+    "O paciente vê as próprias consultas e o profissional as da sua agenda. O ADMIN vê todas, sem o motivo (texto clínico).",
+  middleware: [authenticate],
+  request: { query: listarConsultasQuerySchema },
+  responses: {
+    200: {
+      description: "Página de consultas",
+      content: jsonContent(paginatedResponseSchema(consultaSchema)),
+    },
+    ...errorResponses(400, 401),
+  },
+});
+
+const obterRoute = createRoute({
+  ...base,
+  method: "get",
+  path: "/{id}",
+  summary: "Consulta os dados de uma consulta",
+  description: "Só para o paciente, o profissional da consulta e o ADMIN.",
+  middleware: [authenticate],
+  request: { params: idParamSchema },
+  responses: { 200: consultaResponse, ...errorResponses(400, 401, 404) },
+});
+
 export const consultasRoutes = createRouter()
+  .openapi(listarRoute, async (c) => {
+    const pagina = await listarConsultas(c.req.valid("query"), getAtor(c));
+    return c.json(pagina, 200);
+  })
+  .openapi(obterRoute, async (c) => {
+    const consulta = await obterConsulta(c.req.valid("param").id, getAtor(c));
+    return c.json({ data: consulta }, 200);
+  })
   .openapi(agendarRoute, async (c) => {
     const consulta = await agendarConsulta(c.req.valid("json"), getAtor(c));
     return c.json({ data: consulta }, 201);

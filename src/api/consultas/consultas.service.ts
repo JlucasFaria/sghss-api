@@ -1,4 +1,4 @@
-// Regras de negócio das consultas (RF11–RF13)
+// Regras de negócio das consultas: agendamento (RF11), cancelamento e reagendamento (RF12) e listagem (RF13)
 import {
   Perfil,
   StatusConsulta,
@@ -8,6 +8,8 @@ import {
 import { prisma } from "../../db/client";
 import { conflict, notFound } from "../../utils/app-error";
 import type { Ator } from "../../utils/ator";
+import { intervaloDoDia } from "../../utils/datas";
+import { buildPaginationMeta, toSkipTake } from "../../utils/pagination";
 import {
   AcaoAuditoria,
   registrarAuditoria,
@@ -16,6 +18,7 @@ import type {
   AgendarConsultaInput,
   CancelarConsultaInput,
   ConsultaResponse,
+  ListarConsultasQuery,
   ReagendarConsultaInput,
 } from "./consultas.schema";
 
@@ -348,5 +351,73 @@ export async function reagendarConsulta(
     );
   });
 
+  return buscarConsultaCompleta(id, ator);
+}
+
+// ---------- Listagem e consulta individual (RF13) ----------
+
+// O paciente vê as próprias consultas; o profissional, as da sua agenda;
+// o ADMIN, todas (sem o motivo, removido em paraResposta)
+const escopoDoAtor = (ator: Ator): Prisma.ConsultaWhereInput => {
+  if (ator.perfil === Perfil.ADMIN) return {};
+  if (ator.perfil === Perfil.PACIENTE) {
+    return { paciente: { usuarioId: ator.usuarioId } };
+  }
+  return { horario: { profissional: { usuarioId: ator.usuarioId } } };
+};
+
+export async function listarConsultas(
+  {
+    status,
+    de,
+    ate,
+    pacienteId,
+    profissionalId,
+    ...paginacao
+  }: ListarConsultasQuery,
+  ator: Ator,
+) {
+  const where: Prisma.ConsultaWhereInput = {
+    AND: [
+      escopoDoAtor(ator),
+      {
+        status,
+        pacienteId,
+        horario: {
+          profissionalId,
+          inicio: {
+            gte: de ? intervaloDoDia(de).inicio : undefined,
+            lt: ate ? intervaloDoDia(ate).fim : undefined,
+          },
+        },
+      },
+    ],
+  };
+
+  // Fora de transação: com relações aninhadas, o Prisma 7 dispara queries
+  // paralelas, e no pool cada uma usa a própria conexão
+  const [consultas, total] = await Promise.all([
+    prisma.consulta.findMany({
+      where,
+      select: selecao,
+      orderBy: { horario: { inicio: "asc" } },
+      ...toSkipTake(paginacao),
+    }),
+    prisma.consulta.count({ where }),
+  ]);
+
+  return {
+    data: consultas.map((consulta) => paraResposta(consulta, ator)),
+    meta: buildPaginationMeta(paginacao, total),
+  };
+}
+
+// Quem não participa da consulta recebe 404
+export async function obterConsulta(id: string, ator: Ator) {
+  const visivel = await prisma.consulta.findFirst({
+    where: { AND: [{ id }, escopoDoAtor(ator)] },
+    select: { id: true },
+  });
+  if (!visivel) throw notFound("Consulta não encontrada.");
   return buscarConsultaCompleta(id, ator);
 }
