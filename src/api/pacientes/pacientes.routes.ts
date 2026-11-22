@@ -1,4 +1,4 @@
-// Rotas de pacientes: gestão do cadastro pelo ADMIN
+// Rotas de pacientes: perfil do próprio paciente e gestão do cadastro pelo ADMIN
 import { createRoute } from "@hono/zod-openapi";
 import { Perfil } from "../../../generated/prisma/client";
 import { authenticate, requireRole } from "../../middlewares/auth";
@@ -16,20 +16,24 @@ import {
 import { dataResponseSchema } from "../../utils/response";
 import {
   atualizarPacienteSchema,
+  atualizarPerfilSchema,
   buscaCpfSchema,
   pacienteResumoSchema,
   pacienteSchema,
 } from "./pacientes.schema";
 import {
+  atualizarMeuPerfil,
   atualizarPaciente,
   buscarPorCpf,
   inativarPaciente,
   listarPacientes,
+  obterMeuPerfil,
   obterPaciente,
 } from "./pacientes.service";
 
 const base = { tags: ["Pacientes"], security: [{ bearerAuth: [] }] };
 const somenteAdmin = [authenticate, requireRole(Perfil.ADMIN)];
+const somentePaciente = [authenticate, requireRole(Perfil.PACIENTE)];
 const pacienteResponse = {
   description: "Paciente com dados completos",
   content: jsonContent(dataResponseSchema(pacienteSchema)),
@@ -61,6 +65,29 @@ const buscarCpfRoute = createRoute({
     "O CPF vai no corpo, nunca na URL (que fica em logs e históricos), e é comparado pelo hash.",
   middleware: somenteAdmin,
   request: { body: { required: true, content: jsonContent(buscaCpfSchema) } },
+  responses: { 200: pacienteResponse, ...errorResponses(400, 401, 403, 404) },
+});
+
+const meuPerfilRoute = createRoute({
+  ...base,
+  method: "get",
+  path: "/me",
+  summary: "Dados cadastrais do paciente autenticado",
+  middleware: somentePaciente,
+  responses: { 200: pacienteResponse, ...errorResponses(401, 403, 404) },
+});
+
+const atualizarMeuPerfilRoute = createRoute({
+  ...base,
+  method: "put",
+  path: "/me",
+  summary: "Atualiza os dados cadastrais do paciente autenticado",
+  description:
+    "Altera nome, data de nascimento e telefone. O CPF só pode ser corrigido pelo ADMIN.",
+  middleware: somentePaciente,
+  request: {
+    body: { required: true, content: jsonContent(atualizarPerfilSchema) },
+  },
   responses: { 200: pacienteResponse, ...errorResponses(400, 401, 403, 404) },
 });
 
@@ -112,6 +139,15 @@ export const pacientesRoutes = createRouter()
   })
   .openapi(buscarCpfRoute, async (c) => {
     const paciente = await buscarPorCpf(c.req.valid("json").cpf, getAtor(c));
+    return c.json({ data: paciente }, 200);
+  })
+  // /me antes de /{id}: senão "me" seria tratado como um id
+  .openapi(meuPerfilRoute, async (c) => {
+    const paciente = await obterMeuPerfil(c.get("usuario").id);
+    return c.json({ data: paciente }, 200);
+  })
+  .openapi(atualizarMeuPerfilRoute, async (c) => {
+    const paciente = await atualizarMeuPerfil(c.req.valid("json"), getAtor(c));
     return c.json({ data: paciente }, 200);
   })
   .openapi(obterRoute, async (c) => {

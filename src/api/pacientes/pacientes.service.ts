@@ -1,4 +1,4 @@
-// Regras de negócio da gestão de pacientes pelo ADMIN (RF08)
+// Regras de negócio de pacientes: gestão pelo ADMIN (RF08) e perfil do titular (RF09)
 import type { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../db/client";
 import { notFound } from "../../utils/app-error";
@@ -15,6 +15,7 @@ import {
 } from "../auditoria/auditoria.service";
 import type {
   AtualizarPacienteInput,
+  AtualizarPerfilInput,
   PacienteResponse,
   PacienteResumo,
 } from "./pacientes.schema";
@@ -163,5 +164,42 @@ export function inativarPaciente(id: string, ator: Ator) {
       },
       tx,
     );
+  });
+}
+
+// ---------- Perfil do próprio paciente (RF09) ----------
+
+export async function obterMeuPerfil(usuarioId: string) {
+  return paraResposta(await buscarPacienteOuFalhar({ usuarioId }));
+}
+
+export function atualizarMeuPerfil(
+  { telefone, ...dados }: AtualizarPerfilInput,
+  ator: Ator,
+) {
+  return prisma.$transaction(async (tx) => {
+    const { id } = await buscarPacienteOuFalhar(
+      { usuarioId: ator.usuarioId },
+      tx,
+    );
+
+    const paciente = await tx.paciente.update({
+      where: { id },
+      data: { ...dados, telefoneCifrado: telefone ? encrypt(telefone) : null },
+      select: selecao,
+    });
+
+    await registrarAuditoria(
+      {
+        ...ator,
+        acao: AcaoAuditoria.PACIENTE_ATUALIZADO,
+        entidade: "paciente",
+        entidadeId: id,
+        detalhes: { origem: "titular" },
+      },
+      tx,
+    );
+
+    return paraResposta(paciente);
   });
 }

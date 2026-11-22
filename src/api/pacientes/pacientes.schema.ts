@@ -46,3 +46,10 @@ export const atualizarPacienteSchema = z
 export type AtualizarPacienteInput = z.infer<typeof atualizarPacienteSchema>;
 export type PacienteResponse = z.infer<typeof pacienteSchema>;
 export type PacienteResumo = z.infer<typeof pacienteResumoSchema>;
+
+// PUT do próprio paciente: o CPF identifica o titular e só o ADMIN corrige
+export const atualizarPerfilSchema = atualizarPacienteSchema
+  .pick({ nome: true, dataNascimento: true, telefone: true })
+  .openapi("PerfilPacienteAtualizacao");
+
+export type AtualizarPerfilInput = z.infer<typeof atualizarPerfilSchema>;
