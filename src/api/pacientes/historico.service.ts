@@ -143,13 +143,9 @@ async function atendePaciente(usuarioId: string, pacienteId: string) {
   return vinculo !== null;
 }
 
+// Sem vínculo a resposta é 403, exista o paciente ou não: assim o profissional
+// não consegue descobrir quais ids de paciente existem
 export async function historicoDoPaciente(pacienteId: string, ator: Ator) {
-  const existe = await prisma.paciente.findUnique({
-    where: { id: pacienteId },
-    select: { id: true },
-  });
-  if (!existe) throw notFound("Paciente não encontrado.");
-
   if (!(await atendePaciente(ator.usuarioId, pacienteId))) {
     throw forbidden("Você só pode ver o histórico de pacientes que atende.");
   }

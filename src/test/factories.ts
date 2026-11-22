@@ -125,16 +125,20 @@ export async function criarHorario(
   });
 }
 
-// Consulta presencial agendada; usa a unidade do profissional do horário
+// Consulta presencial agendada; usa a unidade do profissional do horário.
+// Como no sistema real, o horário fica RESERVADO (ou DISPONIVEL se cancelada).
 export async function criarConsulta(
   data: Partial<Prisma.ConsultaUncheckedCreateInput> = {},
 ) {
   const pacienteId = data.pacienteId ?? (await criarPaciente()).id;
+  const statusHorario =
+    data.status === "CANCELADA" ? "DISPONIVEL" : "RESERVADO";
   const horario = data.horarioId
-    ? await prisma.horarioAgenda.findUniqueOrThrow({
+    ? await prisma.horarioAgenda.update({
         where: { id: data.horarioId },
+        data: { status: statusHorario },
       })
-    : await criarHorario({ status: "RESERVADO" });
+    : await criarHorario({ status: statusHorario });
   const { unidadeId } = await prisma.profissional.findUniqueOrThrow({
     where: { id: horario.profissionalId },
   });

@@ -181,7 +181,7 @@ describe("GET /pacientes/:id/historico", () => {
     },
   );
 
-  it("responde 404 para paciente inexistente", async () => {
+  it("responde 403 para paciente inexistente, sem revelar se o id existe", async () => {
     const profissional = await criarProfissional();
 
     const res = await consultar(
@@ -189,6 +189,6 @@ describe("GET /pacientes/:id/historico", () => {
       crypto.randomUUID(),
     );
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(403);
   });
 });

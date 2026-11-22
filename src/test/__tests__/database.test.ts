@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { prisma } from "../../db/client";
 import { resetDatabase } from "../db";
-import { criarLeito, criarProfissional, criarUsuario } from "../factories";
+import {
+  criarConsulta,
+  criarHorario,
+  criarLeito,
+  criarProfissional,
+  criarUsuario,
+} from "../factories";
 
 describe("banco de testes", () => {
   beforeEach(resetDatabase);
@@ -71,5 +77,20 @@ describe("banco de testes", () => {
       .catch((error: unknown) => error);
 
     expect(erro).toMatchObject({ code: "P2003" });
+  });
+
+  it("criarConsulta deixa o horário coerente com o status da consulta", async () => {
+    const reservado = await criarHorario();
+    const liberado = await criarHorario();
+
+    await criarConsulta({ horarioId: reservado.id });
+    await criarConsulta({ horarioId: liberado.id, status: "CANCELADA" });
+
+    const buscar = (id: string) =>
+      prisma.horarioAgenda.findUniqueOrThrow({ where: { id } });
+    const horarioReservado = await buscar(reservado.id);
+    const horarioLiberado = await buscar(liberado.id);
+    expect(horarioReservado.status).toBe("RESERVADO");
+    expect(horarioLiberado.status).toBe("DISPONIVEL");
   });
 });

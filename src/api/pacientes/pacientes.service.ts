@@ -37,11 +37,11 @@ type PacienteSelecionado = Prisma.PacienteGetPayload<{
 const paraData = (date: Date) => date.toISOString().slice(0, 10);
 
 // Mostra só os 6 dígitos do meio, ex.: ***.982.247-**
-export const mascararCpf = (cpf: string) =>
+const mascararCpf = (cpf: string) =>
   `***.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-**`;
 
 // Decifra CPF e telefone para a resposta completa
-export const paraResposta = (p: PacienteSelecionado): PacienteResponse => ({
+const paraResposta = (p: PacienteSelecionado): PacienteResponse => ({
   id: p.id,
   nome: p.nome,
   cpf: decrypt(p.cpfCifrado),
@@ -61,7 +61,7 @@ const paraResumo = (p: PacienteSelecionado): PacienteResumo => ({
   ativo: p.usuario.ativo,
 });
 
-export async function buscarPacienteOuFalhar(
+async function buscarPacienteOuFalhar(
   where: Prisma.PacienteWhereUniqueInput,
   db: Prisma.TransactionClient = prisma,
 ) {
