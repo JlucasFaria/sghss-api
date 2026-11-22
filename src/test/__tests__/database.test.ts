@@ -54,4 +54,22 @@ describe("banco de testes", () => {
 
     expect(erro).toMatchObject({ code: "P2002" });
   });
+
+  it("impede excluir usuário com registros de auditoria", async () => {
+    const usuario = await criarUsuario();
+    await prisma.logAuditoria.create({
+      data: {
+        usuarioId: usuario.id,
+        acao: "LOGIN",
+        entidade: "usuario",
+        ip: "127.0.0.1",
+      },
+    });
+
+    const erro = await prisma.usuario
+      .delete({ where: { id: usuario.id } })
+      .catch((error: unknown) => error);
+
+    expect(erro).toMatchObject({ code: "P2003" });
+  });
 });

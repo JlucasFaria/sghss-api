@@ -26,6 +26,7 @@ export async function criarUnidade(
   });
 }
 
+// Perfil padrão é o de menor privilégio, para que testes de RBAC não passem por engano
 export async function criarUsuario(
   data: Partial<Prisma.UsuarioUncheckedCreateInput> = {},
 ) {
@@ -33,7 +34,7 @@ export async function criarUsuario(
     data: {
       email: `usuario-${unique()}@teste.example`,
       senhaHash: "hash-de-teste",
-      perfil: Perfil.ADMIN,
+      perfil: Perfil.PACIENTE,
       ...data,
     },
   });

@@ -433,7 +433,8 @@ model Notificacao {
 }
 
 // Somente inclusão (RNF05). "detalhes" guarda apenas identificadores e o tipo
-// da alteração, nunca dados pessoais ou clínicos. Usuário nulo = ação anônima.
+// da alteração, nunca dados pessoais ou clínicos. Usuário nulo = ação anônima;
+// Restrict impede que excluir um usuário apague a autoria dos registros.
 model LogAuditoria {
   id         String   @id @default(uuid()) @db.Uuid
   usuarioId  String?  @map("usuario_id") @db.Uuid
@@ -444,7 +445,7 @@ model LogAuditoria {
   detalhes   Json?
   criadoEm   DateTime @default(now()) @map("criado_em")
 
-  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
 
   @@index([usuarioId, criadoEm])
   @@index([acao, criadoEm])
