@@ -1,4 +1,5 @@
-// Modelos de domínio do SGHSS são definidos no grupo de modelagem do banco.
+// Modelo de dados do SGHSS (ver docs/modelagem.md e docs/diagramas/der.puml).
+// Convenção: modelos e campos em camelCase no código, tabelas e colunas em snake_case no banco.
 
 generator client {
   provider = "prisma-client"
@@ -7,4 +8,51 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------- Acesso e cadastros ----------
+
+enum Perfil {
+  ADMIN
+  MEDICO
+  ENFERMEIRO
+  TECNICO
+  PACIENTE
+
+  @@map("perfil")
+}
+
+enum TipoUnidade {
+  HOSPITAL
+  CLINICA
+  LABORATORIO
+  HOME_CARE
+
+  @@map("tipo_unidade")
+}
+
+model Usuario {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  senhaHash    String   @map("senha_hash") @db.VarChar(255)
+  perfil       Perfil
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  @@map("usuario")
+}
+
+model Unidade {
+  id           String      @id @default(uuid()) @db.Uuid
+  nome         String      @db.VarChar(150)
+  tipo         TipoUnidade
+  endereco     String      @db.VarChar(255)
+  cidade       String      @db.VarChar(100)
+  uf           String      @db.Char(2)
+  ativo        Boolean     @default(true)
+  criadoEm     DateTime    @default(now()) @map("criado_em")
+  atualizadoEm DateTime    @updatedAt @map("atualizado_em")
+
+  @@map("unidade")
 }
