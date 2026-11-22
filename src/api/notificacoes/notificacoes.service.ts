@@ -1,4 +1,4 @@
-// Notificações (RF20): geradas nos eventos da consulta e persistidas no banco.
+// Notificações: geradas nos eventos da consulta (RF20) e consultadas pelo usuário (RF21).
 // O envio externo (e-mail, SMS, push) é uma integração futura.
 import {
   type ModalidadeConsulta,
@@ -7,7 +7,10 @@ import {
   type Prisma,
 } from "../../../generated/prisma/client";
 import { prisma } from "../../db/client";
+import { notFound } from "../../utils/app-error";
 import { formatarDataHora } from "../../utils/datas";
+import { buildPaginationMeta, toSkipTake } from "../../utils/pagination";
+import type { ListarNotificacoesQuery } from "./notificacoes.schema";
 
 // Texto de cada evento: só data, profissional e modalidade (nada de dado clínico)
 const mensagens: Record<
@@ -108,4 +111,55 @@ export function gerarLembretes(agora = new Date()) {
     }
     return consultas.length;
   });
+}
+
+// ---------- Consulta pelo usuário (RF21) ----------
+
+const selecaoNotificacao = {
+  id: true,
+  tipo: true,
+  titulo: true,
+  mensagem: true,
+  consultaId: true,
+  lidaEm: true,
+  criadoEm: true,
+} satisfies Prisma.NotificacaoSelect;
+
+// Cada usuário vê só as próprias notificações, das mais recentes para as mais antigas
+export async function listarNotificacoes(
+  usuarioId: string,
+  { naoLidas, ...paginacao }: ListarNotificacoesQuery,
+) {
+  const where: Prisma.NotificacaoWhereInput = {
+    usuarioId,
+    lidaEm: naoLidas ? null : undefined,
+  };
+
+  const [notificacoes, total] = await Promise.all([
+    prisma.notificacao.findMany({
+      where,
+      select: selecaoNotificacao,
+      orderBy: { criadoEm: "desc" },
+      ...toSkipTake(paginacao),
+    }),
+    prisma.notificacao.count({ where }),
+  ]);
+
+  return { data: notificacoes, meta: buildPaginationMeta(paginacao, total) };
+}
+
+// Marca como lida; repetir a chamada mantém a data da primeira leitura.
+// Notificação de outro usuário responde 404, sem revelar que existe.
+export async function marcarComoLida(id: string, usuarioId: string) {
+  await prisma.notificacao.updateMany({
+    where: { id, usuarioId, lidaEm: null },
+    data: { lidaEm: new Date() },
+  });
+
+  const notificacao = await prisma.notificacao.findFirst({
+    where: { id, usuarioId },
+    select: selecaoNotificacao,
+  });
+  if (!notificacao) throw notFound("Notificação não encontrada.");
+  return notificacao;
 }
