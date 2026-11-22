@@ -8,6 +8,7 @@ import {
   AcaoAuditoria,
   registrarAuditoria,
 } from "../auditoria/auditoria.service";
+import { exigirSemConsultasFuturas } from "../consultas/consultas.service";
 import type {
   ListarUnidadesQuery,
   UnidadeInput,
@@ -75,6 +76,9 @@ export function atualizarUnidade(
 ) {
   return prisma.$transaction(async (tx) => {
     await buscarUnidade(id, tx);
+    if (input.ativo === false) {
+      await exigirSemConsultasFuturas({ unidadeId: id }, tx);
+    }
     const unidade = await tx.unidade.update({ where: { id }, data: input });
     await registrarAuditoria(
       {
@@ -93,6 +97,7 @@ export function atualizarUnidade(
 export function inativarUnidade(id: string, ator: Ator) {
   return prisma.$transaction(async (tx) => {
     await buscarUnidade(id, tx);
+    await exigirSemConsultasFuturas({ unidadeId: id }, tx);
     await tx.unidade.update({ where: { id }, data: { ativo: false } });
     await registrarAuditoria(
       {

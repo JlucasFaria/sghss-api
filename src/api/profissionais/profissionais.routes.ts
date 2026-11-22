@@ -99,12 +99,12 @@ const inativarRoute = createRoute({
   path: "/{id}",
   summary: "Inativa um profissional",
   description:
-    "Bloqueia o acesso do profissional na hora; o histórico clínico é preservado.",
+    "Bloqueia o acesso do profissional na hora; o histórico clínico é preservado. Recusada (409) se houver consultas futuras agendadas.",
   middleware: somenteAdmin,
   request: { params: idParamSchema },
   responses: {
     204: { description: "Profissional inativado" },
-    ...errorResponses(400, 401, 403, 404),
+    ...errorResponses(400, 401, 403, 404, 409),
   },
 });
 

@@ -87,7 +87,7 @@ const atualizarRoute = createRoute({
   },
   responses: {
     200: unidadeResponse,
-    ...errorResponses(400, 401, 403, 404),
+    ...errorResponses(400, 401, 403, 404, 409),
   },
 });
 
@@ -96,12 +96,13 @@ const inativarRoute = createRoute({
   method: "delete",
   path: "/{id}",
   summary: "Inativa uma unidade",
-  description: "Inativação lógica: os registros vinculados são preservados.",
+  description:
+    "Inativação lógica: os registros vinculados são preservados. Recusada (409) se houver consultas futuras agendadas.",
   middleware: somenteAdmin,
   request: { params: idParamSchema },
   responses: {
     204: { description: "Unidade inativada" },
-    ...errorResponses(400, 401, 403, 404),
+    ...errorResponses(400, 401, 403, 404, 409),
   },
 });
 
