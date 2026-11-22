@@ -1,4 +1,5 @@
-// Modelos de domínio do SGHSS são definidos no grupo de modelagem do banco.
+// Modelo de dados do SGHSS (ver docs/modelagem.md e docs/diagramas/der.puml).
+// Convenção: modelos e campos em camelCase no código, tabelas e colunas em snake_case no banco.
 
 generator client {
   provider = "prisma-client"
@@ -7,4 +8,463 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ---------- Acesso e cadastros ----------
+
+enum Perfil {
+  ADMIN
+  MEDICO
+  ENFERMEIRO
+  TECNICO
+  PACIENTE
+
+  @@map("perfil")
+}
+
+enum TipoUnidade {
+  HOSPITAL
+  CLINICA
+  LABORATORIO
+  HOME_CARE
+
+  @@map("tipo_unidade")
+}
+
+enum Conselho {
+  CRM
+  COREN
+
+  @@map("conselho")
+}
+
+model Usuario {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  senhaHash    String   @map("senha_hash") @db.VarChar(255)
+  perfil       Perfil
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now()) @map("criado_em")
+  atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  paciente      Paciente?
+  profissional  Profissional?
+  movimentacoes MovimentacaoEstoque[]
+  notificacoes  Notificacao[]
+  logsAuditoria LogAuditoria[]
+
+  @@map("usuario")
+}
+
+model Unidade {
+  id           String      @id @default(uuid()) @db.Uuid
+  nome         String      @db.VarChar(150)
+  tipo         TipoUnidade
+  endereco     String      @db.VarChar(255)
+  cidade       String      @db.VarChar(100)
+  uf           String      @db.Char(2)
+  ativo        Boolean     @default(true)
+  criadoEm     DateTime    @default(now()) @map("criado_em")
+  atualizadoEm DateTime    @updatedAt @map("atualizado_em")
+
+  profissionais Profissional[]
+  consultas     Consulta[]
+  exames        Exame[]
+  leitos        Leito[]
+  suprimentos   Suprimento[]
+  lancamentos   LancamentoFinanceiro[]
+
+  @@map("unidade")
+}
+
+// Campos "Cifrado" são gravados com AES-256-GCM; cpfHash (HMAC-SHA-256)
+// garante a unicidade e permite buscar pelo CPF sem decifrar a tabela.
+model Paciente {
+  id              String    @id @default(uuid()) @db.Uuid
+  usuarioId       String    @unique @map("usuario_id") @db.Uuid
+  nome            String    @db.VarChar(150)
+  cpfCifrado      String    @map("cpf_cifrado")
+  cpfHash         String    @unique @map("cpf_hash") @db.Char(64)
+  dataNascimento  DateTime  @map("data_nascimento") @db.Date
+  telefoneCifrado String?   @map("telefone_cifrado")
+  anonimizadoEm   DateTime? @map("anonimizado_em")
+  criadoEm        DateTime  @default(now()) @map("criado_em")
+  atualizadoEm    DateTime  @updatedAt @map("atualizado_em")
+
+  usuario        Usuario             @relation(fields: [usuarioId], references: [id])
+  consultas      Consulta[]
+  exames         Exame[]
+  internacoes    Internacao[]
+  consentimentos ConsentimentoLgpd[]
+
+  @@map("paciente")
+}
+
+model Profissional {
+  id            String   @id @default(uuid()) @db.Uuid
+  usuarioId     String   @unique @map("usuario_id") @db.Uuid
+  unidadeId     String   @map("unidade_id") @db.Uuid
+  nome          String   @db.VarChar(150)
+  conselho      Conselho
+  registro      String   @db.VarChar(20)
+  especialidade String?  @db.VarChar(100)
+  criadoEm      DateTime @default(now()) @map("criado_em")
+  atualizadoEm  DateTime @updatedAt @map("atualizado_em")
+
+  usuario   Usuario              @relation(fields: [usuarioId], references: [id])
+  unidade   Unidade              @relation(fields: [unidadeId], references: [id])
+  horarios  HorarioAgenda[]
+  exames    Exame[]
+  registros RegistroProntuario[]
+
+  @@unique([conselho, registro])
+  @@index([unidadeId])
+  @@map("profissional")
+}
+
+// ---------- Agenda, consultas e exames ----------
+
+enum StatusHorario {
+  DISPONIVEL
+  RESERVADO
+  BLOQUEADO
+
+  @@map("status_horario")
+}
+
+enum ModalidadeConsulta {
+  PRESENCIAL
+  TELEMEDICINA
+
+  @@map("modalidade_consulta")
+}
+
+enum StatusConsulta {
+  AGENDADA
+  REALIZADA
+  CANCELADA
+
+  @@map("status_consulta")
+}
+
+enum StatusExame {
+  AGENDADO
+  REALIZADO
+  CANCELADO
+
+  @@map("status_exame")
+}
+
+// Sobreposição de horários e a regra fim > inicio são validadas no serviço.
+model HorarioAgenda {
+  id             String        @id @default(uuid()) @db.Uuid
+  profissionalId String        @map("profissional_id") @db.Uuid
+  inicio         DateTime
+  fim            DateTime
+  status         StatusHorario @default(DISPONIVEL)
+
+  profissional Profissional @relation(fields: [profissionalId], references: [id])
+  consultas    Consulta[]
+
+  @@unique([profissionalId, inicio])
+  @@index([inicio])
+  @@map("horario_agenda")
+}
+
+// O profissional da consulta é obtido pelo horário; cancelar devolve o horário
+// para DISPONIVEL, por isso um horário pode ter várias consultas no histórico.
+model Consulta {
+  id                 String             @id @default(uuid()) @db.Uuid
+  pacienteId         String             @map("paciente_id") @db.Uuid
+  horarioId          String             @map("horario_id") @db.Uuid
+  unidadeId          String             @map("unidade_id") @db.Uuid
+  modalidade         ModalidadeConsulta
+  status             StatusConsulta     @default(AGENDADA)
+  motivo             String?            @db.VarChar(500)
+  motivoCancelamento String?            @map("motivo_cancelamento") @db.VarChar(500)
+  criadoEm           DateTime           @default(now()) @map("criado_em")
+  atualizadoEm       DateTime           @updatedAt @map("atualizado_em")
+
+  paciente     Paciente             @relation(fields: [pacienteId], references: [id])
+  horario      HorarioAgenda        @relation(fields: [horarioId], references: [id])
+  unidade      Unidade              @relation(fields: [unidadeId], references: [id])
+  teleconsulta Teleconsulta?
+  registros    RegistroProntuario[]
+  prescricoes  Prescricao[]
+
+  @@index([pacienteId, status])
+  @@index([horarioId])
+  @@index([unidadeId, status])
+  @@map("consulta")
+}
+
+// O token de acesso à sala é gerado na entrada e não é armazenado.
+model Teleconsulta {
+  id          String    @id @default(uuid()) @db.Uuid
+  consultaId  String    @unique @map("consulta_id") @db.Uuid
+  provedor    String    @db.VarChar(50)
+  salaId      String    @map("sala_id") @db.VarChar(255)
+  urlSala     String    @map("url_sala") @db.VarChar(500)
+  iniciadaEm  DateTime? @map("iniciada_em")
+  encerradaEm DateTime? @map("encerrada_em")
+  criadoEm    DateTime  @default(now()) @map("criado_em")
+
+  consulta Consulta @relation(fields: [consultaId], references: [id])
+
+  @@map("teleconsulta")
+}
+
+model Exame {
+  id               String      @id @default(uuid()) @db.Uuid
+  pacienteId       String      @map("paciente_id") @db.Uuid
+  unidadeId        String      @map("unidade_id") @db.Uuid
+  responsavelId    String?     @map("responsavel_id") @db.Uuid
+  tipo             String      @db.VarChar(150)
+  dataHora         DateTime    @map("data_hora")
+  status           StatusExame @default(AGENDADO)
+  resultadoCifrado String?     @map("resultado_cifrado")
+  resultadoEm      DateTime?   @map("resultado_em")
+  criadoEm         DateTime    @default(now()) @map("criado_em")
+  atualizadoEm     DateTime    @updatedAt @map("atualizado_em")
+
+  paciente    Paciente      @relation(fields: [pacienteId], references: [id])
+  unidade     Unidade       @relation(fields: [unidadeId], references: [id])
+  responsavel Profissional? @relation(fields: [responsavelId], references: [id])
+
+  @@index([pacienteId])
+  @@index([unidadeId, dataHora])
+  @@index([responsavelId])
+  @@map("exame")
+}
+
+// ---------- Prontuário e receitas ----------
+
+// Somente inclusão: correções geram um novo registro, preservando o histórico.
+// O autor pode ser outro profissional além do responsável pela consulta.
+model RegistroProntuario {
+  id              String   @id @default(uuid()) @db.Uuid
+  consultaId      String   @map("consulta_id") @db.Uuid
+  autorId         String   @map("autor_id") @db.Uuid
+  conteudoCifrado String   @map("conteudo_cifrado")
+  criadoEm        DateTime @default(now()) @map("criado_em")
+
+  consulta Consulta     @relation(fields: [consultaId], references: [id])
+  autor    Profissional @relation(fields: [autorId], references: [id])
+
+  @@index([consultaId])
+  @@index([autorId])
+  @@map("registro_prontuario")
+}
+
+// O banco guarda só o SHA-256 do código de verificação aleatório entregue na emissão.
+model Prescricao {
+  id                    String   @id @default(uuid()) @db.Uuid
+  consultaId            String   @map("consulta_id") @db.Uuid
+  codigoVerificacaoHash String   @unique @map("codigo_verificacao_hash") @db.Char(64)
+  observacoes           String?  @db.VarChar(1000)
+  emitidaEm             DateTime @default(now()) @map("emitida_em")
+  validaAte             DateTime @map("valida_ate") @db.Date
+
+  consulta Consulta         @relation(fields: [consultaId], references: [id])
+  itens    ItemPrescricao[]
+
+  @@index([consultaId])
+  @@map("prescricao")
+}
+
+model ItemPrescricao {
+  id           String @id @default(uuid()) @db.Uuid
+  prescricaoId String @map("prescricao_id") @db.Uuid
+  medicamento  String @db.VarChar(150)
+  dosagem      String @db.VarChar(100)
+  posologia    String @db.VarChar(500)
+  quantidade   Int
+
+  prescricao Prescricao @relation(fields: [prescricaoId], references: [id], onDelete: Cascade)
+
+  @@index([prescricaoId])
+  @@map("item_prescricao")
+}
+
+// ---------- Administração hospitalar ----------
+
+enum TipoLeito {
+  ENFERMARIA
+  APARTAMENTO
+  UTI
+
+  @@map("tipo_leito")
+}
+
+enum StatusLeito {
+  LIVRE
+  OCUPADO
+  MANUTENCAO
+
+  @@map("status_leito")
+}
+
+enum TipoMovimentacao {
+  ENTRADA
+  SAIDA
+
+  @@map("tipo_movimentacao")
+}
+
+model Leito {
+  id           String      @id @default(uuid()) @db.Uuid
+  unidadeId    String      @map("unidade_id") @db.Uuid
+  codigo       String      @db.VarChar(20)
+  ala          String      @db.VarChar(100)
+  tipo         TipoLeito
+  status       StatusLeito @default(LIVRE)
+  criadoEm     DateTime    @default(now()) @map("criado_em")
+  atualizadoEm DateTime    @updatedAt @map("atualizado_em")
+
+  unidade     Unidade      @relation(fields: [unidadeId], references: [id])
+  internacoes Internacao[]
+
+  @@unique([unidadeId, codigo])
+  @@map("leito")
+}
+
+// Aponta para o leito atual; internar, transferir e dar alta atualizam a
+// internação e o status dos leitos na mesma transação.
+model Internacao {
+  id           String    @id @default(uuid()) @db.Uuid
+  pacienteId   String    @map("paciente_id") @db.Uuid
+  leitoId      String    @map("leito_id") @db.Uuid
+  motivo       String    @db.VarChar(500)
+  admitidoEm   DateTime  @default(now()) @map("admitido_em")
+  altaEm       DateTime? @map("alta_em")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  paciente Paciente @relation(fields: [pacienteId], references: [id])
+  leito    Leito    @relation(fields: [leitoId], references: [id])
+
+  @@index([pacienteId])
+  @@index([leitoId])
+  @@map("internacao")
+}
+
+// Opcional (RF30): modelado no banco, implementação condicionada ao tempo.
+model Suprimento {
+  id            String   @id @default(uuid()) @db.Uuid
+  unidadeId     String   @map("unidade_id") @db.Uuid
+  nome          String   @db.VarChar(150)
+  unidadeMedida String   @map("unidade_medida") @db.VarChar(20)
+  quantidade    Int      @default(0)
+  estoqueMinimo Int      @default(0) @map("estoque_minimo")
+  criadoEm      DateTime @default(now()) @map("criado_em")
+  atualizadoEm  DateTime @updatedAt @map("atualizado_em")
+
+  unidade       Unidade               @relation(fields: [unidadeId], references: [id])
+  movimentacoes MovimentacaoEstoque[]
+
+  @@index([unidadeId])
+  @@map("suprimento")
+}
+
+model MovimentacaoEstoque {
+  id            String           @id @default(uuid()) @db.Uuid
+  suprimentoId  String           @map("suprimento_id") @db.Uuid
+  responsavelId String           @map("responsavel_id") @db.Uuid
+  tipo          TipoMovimentacao
+  quantidade    Int
+  observacao    String?          @db.VarChar(500)
+  criadoEm      DateTime         @default(now()) @map("criado_em")
+
+  suprimento  Suprimento @relation(fields: [suprimentoId], references: [id])
+  responsavel Usuario    @relation(fields: [responsavelId], references: [id])
+
+  @@index([suprimentoId])
+  @@index([responsavelId])
+  @@map("movimentacao_estoque")
+}
+
+enum TipoLancamento {
+  RECEITA
+  DESPESA
+
+  @@map("tipo_lancamento")
+}
+
+// Opcional (RF31): modelado no banco, implementação condicionada ao tempo.
+model LancamentoFinanceiro {
+  id          String         @id @default(uuid()) @db.Uuid
+  unidadeId   String         @map("unidade_id") @db.Uuid
+  tipo        TipoLancamento
+  categoria   String         @db.VarChar(100)
+  descricao   String         @db.VarChar(255)
+  valor       Decimal        @db.Decimal(12, 2)
+  competencia DateTime       @db.Date
+  criadoEm    DateTime       @default(now()) @map("criado_em")
+
+  unidade Unidade @relation(fields: [unidadeId], references: [id])
+
+  @@index([unidadeId, competencia])
+  @@map("lancamento_financeiro")
+}
+
+// ---------- Notificações e compliance ----------
+
+enum TipoNotificacao {
+  CONSULTA_AGENDADA
+  CONSULTA_CANCELADA
+  LEMBRETE_CONSULTA
+
+  @@map("tipo_notificacao")
+}
+
+model Notificacao {
+  id        String          @id @default(uuid()) @db.Uuid
+  usuarioId String          @map("usuario_id") @db.Uuid
+  tipo      TipoNotificacao
+  titulo    String          @db.VarChar(150)
+  mensagem  String          @db.VarChar(500)
+  lidaEm    DateTime?       @map("lida_em")
+  criadoEm  DateTime        @default(now()) @map("criado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId, criadoEm])
+  @@map("notificacao")
+}
+
+// Somente inclusão (RNF05). "detalhes" guarda apenas identificadores e o tipo
+// da alteração, nunca dados pessoais ou clínicos. Usuário nulo = ação anônima;
+// Restrict impede que excluir um usuário apague a autoria dos registros.
+model LogAuditoria {
+  id         String   @id @default(uuid()) @db.Uuid
+  usuarioId  String?  @map("usuario_id") @db.Uuid
+  acao       String   @db.VarChar(100)
+  entidade   String   @db.VarChar(50)
+  entidadeId String?  @map("entidade_id") @db.Uuid
+  ip         String   @db.VarChar(45)
+  detalhes   Json?
+  criadoEm   DateTime @default(now()) @map("criado_em")
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: Restrict)
+
+  @@index([usuarioId, criadoEm])
+  @@index([acao, criadoEm])
+  @@index([criadoEm])
+  @@map("log_auditoria")
+}
+
+// A revogação preenche revogadoEm sem apagar o aceite original (prova para a LGPD).
+model ConsentimentoLgpd {
+  id          String    @id @default(uuid()) @db.Uuid
+  pacienteId  String    @map("paciente_id") @db.Uuid
+  finalidade  String    @db.VarChar(255)
+  versaoTermo String    @map("versao_termo") @db.VarChar(20)
+  concedidoEm DateTime  @default(now()) @map("concedido_em")
+  revogadoEm  DateTime? @map("revogado_em")
+  ip          String    @db.VarChar(45)
+
+  paciente Paciente @relation(fields: [pacienteId], references: [id])
+
+  @@index([pacienteId])
+  @@map("consentimento_lgpd")
 }
