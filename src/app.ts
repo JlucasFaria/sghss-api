@@ -16,6 +16,7 @@ import { leitosRoutes } from "./api/leitos/leitos.routes";
 import { lgpdRoutes } from "./api/lgpd/lgpd.routes";
 import { pacientesRoutes } from "./api/pacientes/pacientes.routes";
 import { prontuarioRoutes } from "./api/prontuario/prontuario.routes";
+import { relatoriosRoutes } from "./api/relatorios/relatorios.routes";
 import {
   emissaoReceitaRoutes,
   receitasRoutes,
@@ -65,6 +66,7 @@ app.route("/notificacoes", notificacoesRoutes);
 app.route("/auditoria", auditoriaRoutes);
 app.route("/leitos", leitosRoutes);
 app.route("/internacoes", internacoesRoutes);
+app.route("/relatorios", relatoriosRoutes);
 
 // Esquema de segurança referenciado pelas rotas protegidas (botão "Authorize" do Swagger)
 app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
