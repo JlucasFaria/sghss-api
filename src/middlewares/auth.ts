@@ -1,8 +1,8 @@
-// Autenticação: valida o token Bearer e injeta o usuário no contexto da requisição
+// Autenticação (token Bearer → usuário no contexto) e autorização por perfil (RBAC)
 import { createMiddleware } from "hono/factory";
 import type { Perfil } from "../../generated/prisma/client";
 import { prisma } from "../db/client";
-import { unauthorized } from "../utils/app-error";
+import { forbidden, unauthorized } from "../utils/app-error";
 import { verifyToken } from "../utils/token";
 
 export type UsuarioAutenticado = { id: string; perfil: Perfil };
@@ -30,3 +30,13 @@ export const authenticate = createMiddleware(async (c, next) => {
   c.set("usuario", { id: usuario.id, perfil: usuario.perfil });
   await next();
 });
+
+// Autorização por perfil (RBAC). Usar depois de `authenticate`:
+// middleware: [authenticate, requireRole(Perfil.ADMIN)]
+export const requireRole = (...perfis: Perfil[]) =>
+  createMiddleware(async (c, next) => {
+    const usuario = c.get("usuario");
+    if (!usuario) throw unauthorized();
+    if (!perfis.includes(usuario.perfil)) throw forbidden();
+    await next();
+  });
