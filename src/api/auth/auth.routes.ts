@@ -1,5 +1,6 @@
 // Rotas de autenticação: autocadastro do paciente e login
 import { createRoute } from "@hono/zod-openapi";
+import { authenticate } from "../../middlewares/auth";
 import { getClientIp } from "../../utils/client-ip";
 import { createRouter, jsonContent } from "../../utils/openapi";
 import { dataResponseSchema, errorResponseSchema } from "../../utils/response";
@@ -9,7 +10,7 @@ import {
   tokenSchema,
   usuarioSchema,
 } from "./auth.schema";
-import { login, registrarPaciente } from "./auth.service";
+import { buscarUsuarioAtual, login, registrarPaciente } from "./auth.service";
 
 const registerRoute = createRoute({
   method: "post",
@@ -59,6 +60,25 @@ const loginRoute = createRoute({
   },
 });
 
+const meRoute = createRoute({
+  method: "get",
+  path: "/me",
+  tags: ["Autenticação"],
+  summary: "Dados de acesso do usuário autenticado",
+  security: [{ bearerAuth: [] }],
+  middleware: [authenticate] as const,
+  responses: {
+    200: {
+      description: "Usuário autenticado",
+      content: jsonContent(dataResponseSchema(usuarioSchema)),
+    },
+    401: {
+      description: "Token ausente, inválido ou expirado",
+      content: jsonContent(errorResponseSchema),
+    },
+  },
+});
+
 export const authRoutes = createRouter()
   .openapi(registerRoute, async (c) => {
     const usuario = await registrarPaciente(
@@ -70,4 +90,8 @@ export const authRoutes = createRouter()
   .openapi(loginRoute, async (c) => {
     const token = await login(c.req.valid("json"));
     return c.json({ data: token }, 200);
+  })
+  .openapi(meRoute, async (c) => {
+    const usuario = await buscarUsuarioAtual(c.get("usuario").id);
+    return c.json({ data: usuario }, 200);
   });

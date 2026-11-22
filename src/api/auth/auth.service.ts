@@ -3,7 +3,7 @@ import { Perfil } from "../../../generated/prisma/client";
 import { env } from "../../config/env";
 import { TERMO_DE_USO } from "../../config/termo-de-uso";
 import { prisma } from "../../db/client";
-import { unauthorized } from "../../utils/app-error";
+import { notFound, unauthorized } from "../../utils/app-error";
 import { encrypt, hashCpf } from "../../utils/crypto";
 import { hashPassword, verifyPassword } from "../../utils/password";
 import { signToken } from "../../utils/token";
@@ -61,4 +61,13 @@ export async function login({ email, senha }: LoginInput) {
     tipo: "Bearer" as const,
     expiraEm: env.JWT_EXPIRES_IN,
   };
+}
+
+export async function buscarUsuarioAtual(id: string) {
+  const usuario = await prisma.usuario.findUnique({
+    where: { id },
+    select: usuarioPublico,
+  });
+  if (!usuario) throw notFound("Usuário não encontrado.");
+  return usuario;
 }

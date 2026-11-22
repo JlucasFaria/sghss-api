@@ -34,6 +34,12 @@ app.use(bodyLimit({ maxSize: BODY_LIMIT_BYTES }));
 app.route("/health", healthRoutes);
 app.route("/auth", authRoutes);
 
+// Esquema de segurança referenciado pelas rotas protegidas (botão "Authorize" do Swagger)
+app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
+  type: "http",
+  scheme: "bearer",
+  bearerFormat: "JWT",
+});
 app.doc("/openapi.json", {
   openapi: "3.0.0",
   info: {
