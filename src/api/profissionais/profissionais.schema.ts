@@ -2,7 +2,12 @@
 import { z } from "@hono/zod-openapi";
 import { Conselho } from "../../../generated/prisma/client";
 import { paginationQuerySchema } from "../../utils/pagination";
-import { emailSchema, safeText, senhaSchema } from "../../utils/validators";
+import {
+  emailSchema,
+  mensagem,
+  safeText,
+  senhaSchema,
+} from "../../utils/validators";
 
 // Perfis de profissional de saúde e o conselho exigido para cada um
 // (o técnico de enfermagem também é registrado no COREN)
@@ -14,12 +19,16 @@ const CONSELHO_POR_PERFIL = {
 
 const perfilProfissionalSchema = z.enum(["MEDICO", "ENFERMEIRO", "TECNICO"]);
 
-// Número do registro com UF opcional, ex.: "123456-PR"
+// Número do registro com a UF do conselho regional, ex.: "123456-PR". A UF é
+// obrigatória porque o mesmo número pode existir em conselhos de estados diferentes
 const registroSchema = z
   .string()
   .trim()
   .toUpperCase()
-  .regex(/^\d{1,10}(-[A-Z]{2})?$/, "Registro inválido. Ex.: 123456-PR.");
+  .regex(
+    /^\d{1,10}-[A-Z]{2}$/,
+    "Registro inválido. Use número-UF, ex.: 123456-PR.",
+  );
 
 const dadosProfissionalSchema = z.object({
   nome: safeText(150).openapi({ example: "Dra. Ana Souza" }),
@@ -27,7 +36,7 @@ const dadosProfissionalSchema = z.object({
   conselho: z.enum(Conselho).openapi({ example: "CRM" }),
   registro: registroSchema.openapi({ example: "123456-PR" }),
   especialidade: safeText(100).optional().openapi({ example: "Cardiologia" }),
-  unidadeId: z.uuid("Identificador inválido."),
+  unidadeId: z.uuid(mensagem("Identificador inválido.")),
 });
 
 const conselhoCompativel = {
@@ -73,7 +82,7 @@ export const profissionalSchema = z
   .openapi("Profissional");
 
 export const listarProfissionaisQuerySchema = paginationQuerySchema.extend({
-  unidadeId: z.uuid("Identificador inválido.").optional(),
+  unidadeId: z.uuid(mensagem("Identificador inválido.")).optional(),
   especialidade: z.string().trim().max(100).optional(),
 });
 

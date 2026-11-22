@@ -1,6 +1,7 @@
 // Schemas de entrada e saída da agenda do profissional
 import { z } from "@hono/zod-openapi";
 import { StatusHorario } from "../../../generated/prisma/client";
+import { mensagem } from "../../utils/validators";
 
 // Limite de sanidade para um único horário (ex.: evita "fim" digitado no dia errado)
 const DURACAO_MAXIMA_HORAS = 12;
@@ -9,7 +10,7 @@ const DURACAO_MAXIMA_HORAS = 12;
 const dataHoraSchema = z.iso
   .datetime({
     offset: true,
-    error: "Data e hora inválidas. Use ISO 8601 com fuso.",
+    ...mensagem("Data e hora inválidas. Use ISO 8601 com fuso."),
   })
   .transform((value) => new Date(value));
 
@@ -72,18 +73,20 @@ export const horarioSchema = z
   .openapi("Horario");
 
 export const agendaQuerySchema = z.object({
-  data: z.iso.date("Data inválida. Use o formato AAAA-MM-DD.").openapi({
-    example: "2026-12-01",
-    description: "Dia no horário de Brasília",
-  }),
+  data: z.iso
+    .date(mensagem("Data inválida. Use o formato AAAA-MM-DD."))
+    .openapi({
+      example: "2026-12-01",
+      description: "Dia no horário de Brasília",
+    }),
 });
 
 export const horarioParamsSchema = z.object({
   id: z
-    .uuid("Identificador inválido.")
+    .uuid(mensagem("Identificador inválido."))
     .openapi({ param: { name: "id", in: "path" } }),
   horarioId: z
-    .uuid("Identificador inválido.")
+    .uuid(mensagem("Identificador inválido."))
     .openapi({ param: { name: "horarioId", in: "path" } }),
 });
 

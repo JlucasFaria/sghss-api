@@ -1,6 +1,7 @@
 // Utilitários de definição das rotas OpenAPI: roteador, conteúdo JSON, erros e parâmetros comuns
 import { OpenAPIHono, z } from "@hono/zod-openapi";
 import { errorResponseSchema } from "./response";
+import { mensagem } from "./validators";
 
 // Falhas de validação seguem para o error handler global
 export const createRouter = () =>
@@ -45,7 +46,7 @@ export const errorResponses = <S extends ErrorStatus>(...statuses: S[]) => {
 
 // Parâmetro de rota :id no formato UUID (ids inválidos viram 400, não 500)
 export const idParamSchema = z.object({
-  id: z.uuid("Identificador inválido.").openapi({
+  id: z.uuid(mensagem("Identificador inválido.")).openapi({
     param: { name: "id", in: "path" },
     example: "7f3c1a52-4b8e-4d1a-9c6f-0a1b2c3d4e01",
   }),

@@ -247,3 +247,54 @@ describe("DELETE /profissionais/:id", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("validação do cadastro", () => {
+  const detalhes = async (body: unknown) => {
+    const res = await requisitar("POST", "/profissionais", {
+      token: admin,
+      body,
+    });
+    return {
+      status: res.status,
+      details: (await lerJson<ErrorResponse>(res)).error.details,
+    };
+  };
+
+  it("exige a UF no registro do conselho", async () => {
+    const { status, details } = await detalhes({
+      ...novoProfissional(),
+      registro: "123456",
+    });
+
+    expect(status).toBe(400);
+    expect(details?.[0]?.field).toBe("registro");
+  });
+
+  it("diferencia campo ausente de identificador inválido", async () => {
+    const { unidadeId: _, ...semUnidade } = novoProfissional();
+
+    const ausente = await detalhes(semUnidade);
+    const invalido = await detalhes({
+      ...novoProfissional(),
+      unidadeId: "abc",
+    });
+
+    expect(ausente.details).toEqual([
+      { field: "unidadeId", message: "Campo obrigatório." },
+    ]);
+    expect(invalido.details).toEqual([
+      { field: "unidadeId", message: "Identificador inválido." },
+    ]);
+  });
+
+  it("informa campo obrigatório também para enums ausentes", async () => {
+    const { perfil: _, ...semPerfil } = novoProfissional();
+
+    const { details } = await detalhes(semPerfil);
+
+    expect(details).toContainEqual({
+      field: "perfil",
+      message: "Campo obrigatório.",
+    });
+  });
+});

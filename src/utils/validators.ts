@@ -81,3 +81,10 @@ export const senhaSchema = z
   .max(128, "A senha deve ter no máximo 128 caracteres.")
   .regex(/[A-Za-z]/, "A senha deve conter ao menos uma letra.")
   .regex(/\d/, "A senha deve conter ao menos um número.");
+
+// Mensagem própria só para valor enviado e inválido: se o campo faltar, prevalece o
+// "Campo obrigatório." global. Uso: z.uuid(mensagem("Identificador inválido."))
+export const mensagem = (texto: string) => ({
+  error: (issue: { input: unknown }) =>
+    issue.input === undefined ? undefined : texto,
+});

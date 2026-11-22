@@ -176,3 +176,19 @@ describe("PUT e DELETE /unidades/:id", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("GET /unidades/:id de unidade inativa", () => {
+  it("responde 404 para quem não é ADMIN e 200 para o ADMIN", async () => {
+    const unidade = await criarUnidade({ ativo: false });
+
+    const paraPaciente = await requisitar("GET", `/unidades/${unidade.id}`, {
+      token: paciente,
+    });
+    const paraAdmin = await requisitar("GET", `/unidades/${unidade.id}`, {
+      token: admin,
+    });
+
+    expect(paraPaciente.status).toBe(404);
+    expect(paraAdmin.status).toBe(200);
+  });
+});

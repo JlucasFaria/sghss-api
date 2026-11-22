@@ -45,6 +45,13 @@ export async function buscarUnidade(
   return unidade;
 }
 
+// Consulta pública: unidade inativa só é visível para o ADMIN (igual à listagem)
+export async function obterUnidade(id: string, admin: boolean) {
+  const unidade = await buscarUnidade(id);
+  if (!unidade.ativo && !admin) throw notFound("Unidade não encontrada.");
+  return unidade;
+}
+
 export function criarUnidade(input: UnidadeInput, ator: Ator) {
   return prisma.$transaction(async (tx) => {
     const unidade = await tx.unidade.create({ data: input });

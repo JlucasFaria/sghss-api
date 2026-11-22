@@ -19,7 +19,7 @@ import {
 } from "./unidades.schema";
 import {
   atualizarUnidade,
-  buscarUnidade,
+  obterUnidade,
   criarUnidade,
   inativarUnidade,
   listarUnidades,
@@ -54,6 +54,7 @@ const buscarRoute = createRoute({
   method: "get",
   path: "/{id}",
   summary: "Consulta uma unidade",
+  description: "Unidades inativas só são visíveis para o ADMIN.",
   middleware: [authenticate],
   request: { params: idParamSchema },
   responses: { 200: unidadeResponse, ...errorResponses(400, 401, 404) },
@@ -111,7 +112,8 @@ export const unidadesRoutes = createRouter()
     return c.json(pagina, 200);
   })
   .openapi(buscarRoute, async (c) => {
-    const unidade = await buscarUnidade(c.req.valid("param").id);
+    const admin = c.get("usuario").perfil === Perfil.ADMIN;
+    const unidade = await obterUnidade(c.req.valid("param").id, admin);
     return c.json({ data: unidade }, 200);
   })
   .openapi(criarRoute, async (c) => {

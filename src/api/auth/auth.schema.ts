@@ -4,13 +4,14 @@ import { Perfil } from "../../../generated/prisma/client";
 import {
   cpfSchema,
   emailSchema,
+  mensagem,
   phoneSchema,
   safeText,
   senhaSchema,
 } from "../../utils/validators";
 
 const dataNascimentoSchema = z.iso
-  .date("Data inválida. Use o formato AAAA-MM-DD.")
+  .date(mensagem("Data inválida. Use o formato AAAA-MM-DD."))
   .transform((value) => new Date(value))
   .refine(
     (date) => date <= new Date() && date.getUTCFullYear() >= 1900,

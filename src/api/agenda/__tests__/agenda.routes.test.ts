@@ -226,7 +226,18 @@ describe("GET /profissionais/:id/horarios", () => {
     ]);
   });
 
-  it("responde 400 sem a data e 404 para profissional inativo (exceto ADMIN)", async () => {
+  it('responde 400 com "Campo obrigatório." sem a data', async () => {
+    const res = await requisitar("GET", url, {
+      token: await autenticar(Perfil.PACIENTE),
+    });
+
+    expect(res.status).toBe(400);
+    expect((await lerJson<ErrorResponse>(res)).error.details).toEqual([
+      { field: "data", message: "Campo obrigatório." },
+    ]);
+  });
+
+  it("responde 404 para profissional inativo (exceto ADMIN)", async () => {
     const paciente = await autenticar(Perfil.PACIENTE);
     const profissional = await prisma.profissional.findUniqueOrThrow({
       where: { id: profissionalId },
@@ -236,7 +247,6 @@ describe("GET /profissionais/:id/horarios", () => {
       data: { ativo: false },
     });
 
-    const semData = await requisitar("GET", url, { token: paciente });
     const inativo = await requisitar("GET", `${url}?data=2030-03-10`, {
       token: paciente,
     });
@@ -244,7 +254,6 @@ describe("GET /profissionais/:id/horarios", () => {
       token: await tokenDe(await criarUsuario({ perfil: Perfil.ADMIN })),
     });
 
-    expect(semData.status).toBe(400);
     expect(inativo.status).toBe(404);
     expect(admin.status).toBe(200);
   });
