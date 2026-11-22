@@ -107,3 +107,62 @@ export async function criarLeito(
     },
   });
 }
+
+// Horário futuro de 30 minutos; cria o profissional quando não informado
+export async function criarHorario(
+  data: Partial<Prisma.HorarioAgendaUncheckedCreateInput> = {},
+) {
+  const profissionalId = data.profissionalId ?? (await criarProfissional()).id;
+  const inicio = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  return prisma.horarioAgenda.create({
+    data: {
+      inicio,
+      fim: new Date(inicio.getTime() + 30 * 60 * 1000),
+      ...data,
+      profissionalId,
+    },
+  });
+}
+
+// Consulta presencial agendada; usa a unidade do profissional do horário
+export async function criarConsulta(
+  data: Partial<Prisma.ConsultaUncheckedCreateInput> = {},
+) {
+  const pacienteId = data.pacienteId ?? (await criarPaciente()).id;
+  const horario = data.horarioId
+    ? await prisma.horarioAgenda.findUniqueOrThrow({
+        where: { id: data.horarioId },
+      })
+    : await criarHorario({ status: "RESERVADO" });
+  const { unidadeId } = await prisma.profissional.findUniqueOrThrow({
+    where: { id: horario.profissionalId },
+  });
+
+  return prisma.consulta.create({
+    data: {
+      modalidade: "PRESENCIAL",
+      unidadeId,
+      ...data,
+      pacienteId,
+      horarioId: horario.id,
+    },
+  });
+}
+
+export async function criarExame(
+  data: Partial<Prisma.ExameUncheckedCreateInput> = {},
+) {
+  const pacienteId = data.pacienteId ?? (await criarPaciente()).id;
+  const unidadeId = data.unidadeId ?? (await criarUnidade()).id;
+
+  return prisma.exame.create({
+    data: {
+      tipo: "Hemograma",
+      dataHora: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      ...data,
+      pacienteId,
+      unidadeId,
+    },
+  });
+}
