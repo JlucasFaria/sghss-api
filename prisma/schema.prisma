@@ -31,6 +31,13 @@ enum TipoUnidade {
   @@map("tipo_unidade")
 }
 
+enum Conselho {
+  CRM
+  COREN
+
+  @@map("conselho")
+}
+
 model Usuario {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique @db.VarChar(254)
@@ -39,6 +46,9 @@ model Usuario {
   ativo        Boolean  @default(true)
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
+
+  paciente     Paciente?
+  profissional Profissional?
 
   @@map("usuario")
 }
@@ -54,5 +64,44 @@ model Unidade {
   criadoEm     DateTime    @default(now()) @map("criado_em")
   atualizadoEm DateTime    @updatedAt @map("atualizado_em")
 
+  profissionais Profissional[]
+
   @@map("unidade")
+}
+
+// Campos "Cifrado" são gravados com AES-256-GCM; cpfHash (HMAC-SHA-256)
+// garante a unicidade e permite buscar pelo CPF sem decifrar a tabela.
+model Paciente {
+  id              String    @id @default(uuid()) @db.Uuid
+  usuarioId       String    @unique @map("usuario_id") @db.Uuid
+  nome            String    @db.VarChar(150)
+  cpfCifrado      String    @map("cpf_cifrado")
+  cpfHash         String    @unique @map("cpf_hash") @db.Char(64)
+  dataNascimento  DateTime  @map("data_nascimento") @db.Date
+  telefoneCifrado String?   @map("telefone_cifrado")
+  anonimizadoEm   DateTime? @map("anonimizado_em")
+  criadoEm        DateTime  @default(now()) @map("criado_em")
+  atualizadoEm    DateTime  @updatedAt @map("atualizado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@map("paciente")
+}
+
+model Profissional {
+  id            String   @id @default(uuid()) @db.Uuid
+  usuarioId     String   @unique @map("usuario_id") @db.Uuid
+  unidadeId     String   @map("unidade_id") @db.Uuid
+  nome          String   @db.VarChar(150)
+  conselho      Conselho
+  registro      String   @db.VarChar(20)
+  especialidade String?  @db.VarChar(100)
+  criadoEm      DateTime @default(now()) @map("criado_em")
+  atualizadoEm  DateTime @updatedAt @map("atualizado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  unidade Unidade @relation(fields: [unidadeId], references: [id])
+
+  @@unique([conselho, registro])
+  @@map("profissional")
 }
