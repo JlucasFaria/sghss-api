@@ -4,6 +4,7 @@ import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
+import { agendaRoutes } from "./api/agenda/agenda.routes";
 import { authRoutes } from "./api/auth/auth.routes";
 import { healthRoutes } from "./api/health/health.routes";
 import { profissionaisRoutes } from "./api/profissionais/profissionais.routes";
@@ -37,6 +38,7 @@ app.route("/health", healthRoutes);
 app.route("/auth", authRoutes);
 app.route("/unidades", unidadesRoutes);
 app.route("/profissionais", profissionaisRoutes);
+app.route("/profissionais", agendaRoutes);
 
 // Esquema de segurança referenciado pelas rotas protegidas (botão "Authorize" do Swagger)
 app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
