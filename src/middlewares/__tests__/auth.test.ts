@@ -62,6 +62,16 @@ describe("authenticate", () => {
     expect(res.status).toBe(401);
   });
 
+  it("aceita o esquema Bearer em minúsculas", async () => {
+    const { token } = await tokenDe(Perfil.PACIENTE);
+
+    const res = await router.request("/privada", {
+      headers: { Authorization: `bearer ${token}` },
+    });
+
+    expect(res.status).toBe(200);
+  });
+
   it("responde 401 com token inválido", async () => {
     expect((await get("/privada", "nao-e-um-jwt")).status).toBe(401);
   });

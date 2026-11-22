@@ -6,6 +6,7 @@ import { resetDatabase } from "../../../test/db";
 import { gerarCpf } from "../../../test/factories";
 import { decrypt, hashCpf } from "../../../utils/crypto";
 import type { ErrorResponse } from "../../../utils/response";
+import { loginRateLimit, registerRateLimit } from "../auth.routes";
 
 type Data<T> = { data: T };
 type Token = { token: string; tipo: string; expiraEm: number };
@@ -18,7 +19,7 @@ const post = (path: string, body: unknown) =>
     body: JSON.stringify(body),
   });
 
-// E-mail único por teste: o rate limit do login é compartilhado no processo
+// Dados únicos por teste, para os cadastros não colidirem entre si
 const novoPaciente = () => ({
   email: `paciente-${crypto.randomUUID().slice(0, 8)}@exemplo.com`,
   senha: "SenhaForte123",
@@ -32,7 +33,12 @@ const novoPaciente = () => ({
 const login = (email: string, senha = "SenhaForte123") =>
   post("/auth/login", { email, senha });
 
-beforeEach(resetDatabase);
+// Os limites são compartilhados no processo e todos os testes saem do mesmo IP
+beforeEach(async () => {
+  registerRateLimit.reset();
+  loginRateLimit.reset();
+  await resetDatabase();
+});
 
 describe("POST /auth/register", () => {
   it("cadastra o paciente com perfil PACIENTE e e-mail normalizado", async () => {
@@ -126,6 +132,15 @@ describe("POST /auth/register", () => {
 
     expect(res.status).toBe(400);
     expect(body.error.details?.map((d) => d.field)).toContain(campo);
+    expect(await prisma.usuario.count()).toBe(0);
+  });
+
+  it("bloqueia com 429 depois de 10 cadastros do mesmo IP", async () => {
+    for (let i = 0; i < 10; i++) await post("/auth/register", {});
+
+    const res = await post("/auth/register", novoPaciente());
+
+    expect(res.status).toBe(429);
     expect(await prisma.usuario.count()).toBe(0);
   });
 });

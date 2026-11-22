@@ -26,6 +26,9 @@ describe("criptografia AES-256-GCM", () => {
     expect(() => decrypt("sem-separadores")).toThrow(
       "Valor cifrado em formato inválido.",
     );
+    expect(() => decrypt(`${encrypt("x")}.extra`)).toThrow(
+      "Valor cifrado em formato inválido.",
+    );
   });
 });
 

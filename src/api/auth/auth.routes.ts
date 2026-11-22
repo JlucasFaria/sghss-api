@@ -13,6 +13,14 @@ import {
 } from "./auth.schema";
 import { buscarUsuarioAtual, login, registrarPaciente } from "./auth.service";
 
+// 10 cadastros por hora por IP: o 409 revela se um CPF ou e-mail já está cadastrado,
+// então o limite impede varrer a base em massa
+export const registerRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  key: (c) => getClientIp(c),
+});
+
 const registerRoute = createRoute({
   method: "post",
   path: "/register",
@@ -20,6 +28,7 @@ const registerRoute = createRoute({
   summary: "Autocadastro de paciente",
   description:
     "Cria a conta do paciente e registra o aceite do termo de uso (consentimento LGPD).",
+  middleware: [registerRateLimit] as const,
   request: {
     body: { required: true, content: jsonContent(registerBodySchema) },
   },
@@ -36,18 +45,25 @@ const registerRoute = createRoute({
       description: "E-mail ou CPF já cadastrado",
       content: jsonContent(errorResponseSchema),
     },
+    429: {
+      description: "Muitos cadastros a partir do mesmo IP",
+      content: jsonContent(errorResponseSchema),
+    },
   },
 });
 
 // 5 tentativas a cada 15 minutos por IP + e-mail: freia força bruta contra uma conta
 // sem bloquear outros usuários atrás do mesmo IP (ex.: rede de um hospital)
-const loginRateLimit = rateLimit({
+export const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   key: async (c) => {
     const body = await c.req.json().catch(() => ({}));
     const email = typeof body?.email === "string" ? body.email : "";
-    return `${getClientIp(c)}:${email.trim().toLowerCase()}`;
+    // Corta no tamanho máximo de um e-mail: o corpo ainda não foi validado e uma
+    // chave gigante ficaria retida na memória durante toda a janela
+    const normalizado = email.trim().toLowerCase().slice(0, 254);
+    return `${getClientIp(c)}:${normalizado}`;
   },
 });
 

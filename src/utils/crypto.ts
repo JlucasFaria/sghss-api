@@ -21,13 +21,14 @@ export const encrypt = (plaintext: string): string => {
 };
 
 export const decrypt = (payload: string): string => {
-  const [iv, authTag, ciphertext] = payload
-    .split(".")
-    .map((part) => Buffer.from(part, "base64"));
-
-  if (!iv || !authTag || !ciphertext) {
+  const parts = payload.split(".");
+  if (parts.length !== 3) {
     throw new Error("Valor cifrado em formato inválido.");
   }
+
+  const [iv, authTag, ciphertext] = parts.map((part) =>
+    Buffer.from(part, "base64"),
+  ) as [Buffer, Buffer, Buffer];
 
   const decipher = createDecipheriv(ALGORITHM, env.ENCRYPTION_KEY, iv);
   decipher.setAuthTag(authTag);

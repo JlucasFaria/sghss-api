@@ -12,7 +12,14 @@ const base64Key = (bytes: number, name: string) =>
       `${name} deve ter exatamente ${bytes} bytes`,
     );
 
-const envSchema = z
+// Valores públicos do .env.example (manter em sincronia com aquele arquivo)
+const VALORES_DE_EXEMPLO = {
+  JWT_SECRET: "troque_por_um_segredo_aleatorio_de_32_caracteres_ou_mais",
+  ENCRYPTION_KEY: "Y2hhdmUtYWVzLWRlc2Vudm9sdmltZW50by0zMi1ieXQ=",
+  CPF_HASH_KEY: "Y2hhdmUtaG1hYy1kZXNlbnZvbHZpbWVudG8tMzItYnk=",
+} as const;
+
+export const envSchema = z
   .object({
     DATABASE_URL: z.url({
       protocol: /^postgres(ql)?$/,
@@ -49,7 +56,27 @@ const envSchema = z
       path: ["CORS_ORIGIN"],
       message: 'CORS_ORIGIN não pode ser "*" em produção',
     },
-  );
+  )
+  // Os valores do .env.example são públicos: aceitos só fora de produção
+  .superRefine((data, ctx) => {
+    if (data.NODE_ENV !== "production") return;
+
+    const atuais: Record<keyof typeof VALORES_DE_EXEMPLO, string> = {
+      JWT_SECRET: data.JWT_SECRET,
+      ENCRYPTION_KEY: data.ENCRYPTION_KEY.toString("base64"),
+      CPF_HASH_KEY: data.CPF_HASH_KEY.toString("base64"),
+    };
+
+    for (const [nome, exemplo] of Object.entries(VALORES_DE_EXEMPLO)) {
+      if (atuais[nome as keyof typeof atuais] === exemplo) {
+        ctx.addIssue({
+          code: "custom",
+          path: [nome],
+          message: `${nome} não pode usar o valor de exemplo em produção`,
+        });
+      }
+    }
+  });
 
 const parsed = envSchema.safeParse(process.env);
 

@@ -15,7 +15,8 @@ declare module "hono" {
 
 export const authenticate = createMiddleware(async (c, next) => {
   const [scheme, token] = c.req.header("Authorization")?.split(" ") ?? [];
-  if (scheme !== "Bearer" || !token) throw unauthorized();
+  // O esquema de autenticação não diferencia maiúsculas (RFC 7235)
+  if (scheme?.toLowerCase() !== "bearer" || !token) throw unauthorized();
 
   const { sub } = await verifyToken(token);
 

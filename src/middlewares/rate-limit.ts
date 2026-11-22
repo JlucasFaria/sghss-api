@@ -21,7 +21,7 @@ export const rateLimit = ({ windowMs, max, key }: RateLimitOptions) => {
     for (const [k, hit] of hits) if (hit.resetAt <= now) hits.delete(k);
   }, windowMs).unref();
 
-  return createMiddleware(async (c, next) => {
+  const middleware = createMiddleware(async (c, next) => {
     const now = Date.now();
     const id = await key(c);
     const hit = hits.get(id);
@@ -39,4 +39,7 @@ export const rateLimit = ({ windowMs, max, key }: RateLimitOptions) => {
 
     await next();
   });
+
+  // reset() zera os contadores (usado nos testes, que compartilham o mesmo IP)
+  return Object.assign(middleware, { reset: () => hits.clear() });
 };
