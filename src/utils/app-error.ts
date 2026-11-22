@@ -29,3 +29,7 @@ export const notFound = (message = "Recurso não encontrado.") =>
 
 export const conflict = (message: string) =>
   new AppError(409, "CONFLITO", message);
+
+// Falha em serviço externo (ex.: provedor de vídeo): o erro não é do cliente
+export const badGateway = (message: string) =>
+  new AppError(502, "SERVICO_EXTERNO_INDISPONIVEL", message);

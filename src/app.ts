@@ -15,6 +15,7 @@ import {
   emissaoReceitaRoutes,
   receitasRoutes,
 } from "./api/receitas/receitas.routes";
+import { telemedicinaRoutes } from "./api/telemedicina/telemedicina.routes";
 import { profissionaisRoutes } from "./api/profissionais/profissionais.routes";
 import { unidadesRoutes } from "./api/unidades/unidades.routes";
 import { env } from "./config/env";
@@ -51,6 +52,7 @@ app.route("/pacientes", pacientesRoutes);
 app.route("/consultas", consultasRoutes);
 app.route("/consultas", prontuarioRoutes);
 app.route("/consultas", emissaoReceitaRoutes);
+app.route("/consultas", telemedicinaRoutes);
 app.route("/receitas", receitasRoutes);
 app.route("/exames", examesRoutes);
 
