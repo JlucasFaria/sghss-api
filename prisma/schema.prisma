@@ -50,6 +50,8 @@ model Usuario {
   paciente      Paciente?
   profissional  Profissional?
   movimentacoes MovimentacaoEstoque[]
+  notificacoes  Notificacao[]
+  logsAuditoria LogAuditoria[]
 
   @@map("usuario")
 }
@@ -70,6 +72,7 @@ model Unidade {
   exames        Exame[]
   leitos        Leito[]
   suprimentos   Suprimento[]
+  lancamentos   LancamentoFinanceiro[]
 
   @@map("unidade")
 }
@@ -88,10 +91,11 @@ model Paciente {
   criadoEm        DateTime  @default(now()) @map("criado_em")
   atualizadoEm    DateTime  @updatedAt @map("atualizado_em")
 
-  usuario     Usuario      @relation(fields: [usuarioId], references: [id])
-  consultas   Consulta[]
-  exames      Exame[]
-  internacoes Internacao[]
+  usuario        Usuario             @relation(fields: [usuarioId], references: [id])
+  consultas      Consulta[]
+  exames         Exame[]
+  internacoes    Internacao[]
+  consentimentos ConsentimentoLgpd[]
 
   @@map("paciente")
 }
@@ -360,4 +364,83 @@ model MovimentacaoEstoque {
   responsavel Usuario    @relation(fields: [responsavelId], references: [id])
 
   @@map("movimentacao_estoque")
+}
+
+enum TipoLancamento {
+  RECEITA
+  DESPESA
+
+  @@map("tipo_lancamento")
+}
+
+// Opcional (RF31): modelado no banco, implementação condicionada ao tempo.
+model LancamentoFinanceiro {
+  id          String         @id @default(uuid()) @db.Uuid
+  unidadeId   String         @map("unidade_id") @db.Uuid
+  tipo        TipoLancamento
+  categoria   String         @db.VarChar(100)
+  descricao   String         @db.VarChar(255)
+  valor       Decimal        @db.Decimal(12, 2)
+  competencia DateTime       @db.Date
+  criadoEm    DateTime       @default(now()) @map("criado_em")
+
+  unidade Unidade @relation(fields: [unidadeId], references: [id])
+
+  @@map("lancamento_financeiro")
+}
+
+// ---------- Notificações e compliance ----------
+
+enum TipoNotificacao {
+  CONSULTA_AGENDADA
+  CONSULTA_CANCELADA
+  LEMBRETE_CONSULTA
+
+  @@map("tipo_notificacao")
+}
+
+model Notificacao {
+  id        String          @id @default(uuid()) @db.Uuid
+  usuarioId String          @map("usuario_id") @db.Uuid
+  tipo      TipoNotificacao
+  titulo    String          @db.VarChar(150)
+  mensagem  String          @db.VarChar(500)
+  lidaEm    DateTime?       @map("lida_em")
+  criadoEm  DateTime        @default(now()) @map("criado_em")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@map("notificacao")
+}
+
+// Somente inclusão (RNF05). "detalhes" guarda apenas identificadores e o tipo
+// da alteração, nunca dados pessoais ou clínicos. Usuário nulo = ação anônima.
+model LogAuditoria {
+  id         String   @id @default(uuid()) @db.Uuid
+  usuarioId  String?  @map("usuario_id") @db.Uuid
+  acao       String   @db.VarChar(100)
+  entidade   String   @db.VarChar(50)
+  entidadeId String?  @map("entidade_id") @db.Uuid
+  ip         String   @db.VarChar(45)
+  detalhes   Json?
+  criadoEm   DateTime @default(now()) @map("criado_em")
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@map("log_auditoria")
+}
+
+// A revogação preenche revogadoEm sem apagar o aceite original (prova para a LGPD).
+model ConsentimentoLgpd {
+  id          String    @id @default(uuid()) @db.Uuid
+  pacienteId  String    @map("paciente_id") @db.Uuid
+  finalidade  String    @db.VarChar(255)
+  versaoTermo String    @map("versao_termo") @db.VarChar(20)
+  concedidoEm DateTime  @default(now()) @map("concedido_em")
+  revogadoEm  DateTime? @map("revogado_em")
+  ip          String    @db.VarChar(45)
+
+  paciente Paciente @relation(fields: [pacienteId], references: [id])
+
+  @@map("consentimento_lgpd")
 }
