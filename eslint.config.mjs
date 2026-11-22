@@ -23,5 +23,10 @@ export default tseslint.config(
       "@typescript-eslint/consistent-type-imports": "error",
     },
   },
+  // Scripts do k6: variáveis globais injetadas pelo próprio k6
+  {
+    files: ["tests/carga/**/*.js"],
+    languageOptions: { globals: { __ENV: "readonly" } },
+  },
   prettierConfig,
 );

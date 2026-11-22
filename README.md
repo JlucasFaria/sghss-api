@@ -70,6 +70,10 @@ bun run test:coverage
 
 O relatório em formato LCOV fica em `coverage/lcov.info`; no CI, ele é publicado como artefato de cada execução.
 
+## Testes não funcionais
+
+O teste de carga (k6) roda via Docker contra a API local; veja [`tests/README.md`](tests/README.md).
+
 ## Coleção Postman
 
 A pasta [`docs/postman`](docs/postman/README.md) tem a coleção com o fluxo autenticado e casos negativos, e o environment para rodar localmente.
@@ -82,6 +86,7 @@ A pasta [`docs/postman`](docs/postman/README.md) tem a coleção com o fluxo aut
 | `bun run start`           | Inicia a API                                  |
 | `bun test`                | Executa os testes                             |
 | `bun run test:coverage`   | Executa os testes com relatório de cobertura  |
+| `bun run test:carga`      | Teste de carga com k6 (Docker; API rodando)   |
 | `bun run lint`            | Verifica o código com ESLint                  |
 | `bun run lint:fix`        | Corrige automaticamente problemas do ESLint   |
 | `bun run format`          | Formata o código com Prettier                 |
