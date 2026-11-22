@@ -3,20 +3,12 @@ import { z } from "@hono/zod-openapi";
 import { Perfil } from "../../../generated/prisma/client";
 import {
   cpfSchema,
+  dataNascimentoSchema,
   emailSchema,
-  mensagem,
   phoneSchema,
   safeText,
   senhaSchema,
 } from "../../utils/validators";
-
-const dataNascimentoSchema = z.iso
-  .date(mensagem("Data inválida. Use o formato AAAA-MM-DD."))
-  .transform((value) => new Date(value))
-  .refine(
-    (date) => date <= new Date() && date.getUTCFullYear() >= 1900,
-    "Data de nascimento inválida.",
-  );
 
 export const registerBodySchema = z
   .object({
@@ -24,11 +16,7 @@ export const registerBodySchema = z
     senha: senhaSchema.openapi({ example: "SenhaForte123" }),
     nome: safeText(150).openapi({ example: "Ana Paula Ribeiro" }),
     cpf: cpfSchema.openapi({ example: "529.982.247-25" }),
-    dataNascimento: dataNascimentoSchema.openapi({
-      type: "string",
-      format: "date",
-      example: "1990-05-20",
-    }),
+    dataNascimento: dataNascimentoSchema,
     telefone: phoneSchema.optional().openapi({ example: "(41) 98765-4321" }),
     aceiteTermo: z.literal(true, "É necessário aceitar o termo de uso."),
   })
