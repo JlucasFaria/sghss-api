@@ -1,5 +1,11 @@
-// Criptografia dos dados sensíveis em repouso (RNF01): AES-256-GCM e HMAC-SHA-256
-import { createCipheriv, createDecipheriv, createHmac } from "node:crypto";
+// Criptografia (RNF01): AES-256-GCM para dados em repouso, HMAC para busca por CPF
+// e código de verificação de receitas com hash SHA-256
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+} from "node:crypto";
 import { env } from "../config/env";
 
 const ALGORITHM = "aes-256-gcm";
@@ -44,3 +50,13 @@ export const decrypt = (payload: string): string => {
 // Recebe o CPF já normalizado (só dígitos), como sai do cpfSchema.
 export const hashCpf = (cpf: string): string =>
   createHmac("sha256", env.CPF_HASH_KEY).update(cpf).digest("hex");
+
+// Código de verificação da receita: 256 bits de um gerador criptográfico, em
+// base64url (43 caracteres, cabe em QR code). Não deriva de dados da receita.
+export const gerarCodigoVerificacao = (): string =>
+  Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+
+// SHA-256 em hex (64 caracteres). Sem sal: o código já é aleatório e longo demais
+// para força bruta, e o hash determinístico permite localizar a receita.
+export const hashSha256 = (valor: string): string =>
+  createHash("sha256").update(valor).digest("hex");

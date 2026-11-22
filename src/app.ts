@@ -10,6 +10,11 @@ import { consultasRoutes } from "./api/consultas/consultas.routes";
 import { examesRoutes } from "./api/exames/exames.routes";
 import { healthRoutes } from "./api/health/health.routes";
 import { pacientesRoutes } from "./api/pacientes/pacientes.routes";
+import { prontuarioRoutes } from "./api/prontuario/prontuario.routes";
+import {
+  emissaoReceitaRoutes,
+  receitasRoutes,
+} from "./api/receitas/receitas.routes";
 import { profissionaisRoutes } from "./api/profissionais/profissionais.routes";
 import { unidadesRoutes } from "./api/unidades/unidades.routes";
 import { env } from "./config/env";
@@ -44,6 +49,9 @@ app.route("/profissionais", profissionaisRoutes);
 app.route("/profissionais", agendaRoutes);
 app.route("/pacientes", pacientesRoutes);
 app.route("/consultas", consultasRoutes);
+app.route("/consultas", prontuarioRoutes);
+app.route("/consultas", emissaoReceitaRoutes);
+app.route("/receitas", receitasRoutes);
 app.route("/exames", examesRoutes);
 
 // Esquema de segurança referenciado pelas rotas protegidas (botão "Authorize" do Swagger)
