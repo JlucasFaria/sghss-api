@@ -15,6 +15,8 @@ env:
   NODE_ENV: test
   # Segredo fictício, usado só no CI
   JWT_SECRET: segredo-de-teste-do-ci-com-mais-de-32-caracteres
+  ENCRYPTION_KEY: Y2hhdmUtZGUtdGVzdGUtZG8tY2ktMzItYnl0ZXMhISE=
+  CPF_HASH_KEY: Y2hhdmUtaG1hYy10ZXN0ZS1kby1jaS0zMi1ieXRlcyE=
 
 jobs:
   qualidade:

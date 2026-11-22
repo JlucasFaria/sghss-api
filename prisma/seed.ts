@@ -7,6 +7,7 @@ import {
 } from "../generated/prisma/client";
 import { env } from "../src/config/env";
 import { prisma } from "../src/db/client";
+import { encrypt, hashCpf } from "../src/utils/crypto";
 import { hashPassword } from "../src/utils/password";
 
 // Senha comum a todos os usuários do seed (apenas desenvolvimento)
@@ -64,6 +65,24 @@ const profissionais = [
   },
 ];
 
+// CPFs fictícios, com dígitos verificadores válidos
+const pacientes = [
+  {
+    email: "joao.pereira@vidaplus.example",
+    nome: "João Pereira",
+    cpf: "16899535009",
+    dataNascimento: new Date("1985-04-12"),
+    telefone: "41987654321",
+  },
+  {
+    email: "maria.santos@vidaplus.example",
+    nome: "Maria Santos",
+    cpf: "07187435045",
+    dataNascimento: new Date("1992-09-30"),
+    telefone: "41998765432",
+  },
+];
+
 const leitos = [
   { codigo: "ENF-101", ala: "Clínica Médica", tipo: TipoLeito.ENFERMARIA },
   { codigo: "ENF-102", ala: "Clínica Médica", tipo: TipoLeito.ENFERMARIA },
@@ -107,6 +126,27 @@ async function main() {
       where: { usuarioId: usuario.id },
       update: {},
       create: { ...profissional, usuarioId: usuario.id },
+    });
+  }
+
+  for (const { email, nome, cpf, dataNascimento, telefone } of pacientes) {
+    const usuario = await prisma.usuario.upsert({
+      where: { email },
+      update: {},
+      create: { email, senhaHash, perfil: Perfil.PACIENTE },
+    });
+
+    await prisma.paciente.upsert({
+      where: { usuarioId: usuario.id },
+      update: {},
+      create: {
+        usuarioId: usuario.id,
+        nome,
+        cpfCifrado: encrypt(cpf),
+        cpfHash: hashCpf(cpf),
+        dataNascimento,
+        telefoneCifrado: encrypt(telefone),
+      },
     });
   }
 

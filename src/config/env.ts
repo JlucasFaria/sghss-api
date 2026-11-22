@@ -2,6 +2,16 @@
 import { z } from "zod";
 import "./zod";
 
+// Chave binária informada em base64 e convertida para bytes já na validação
+const base64Key = (bytes: number, name: string) =>
+  z
+    .base64(`${name} deve estar em base64`)
+    .transform((value) => Buffer.from(value, "base64"))
+    .refine(
+      (key) => key.length === bytes,
+      `${name} deve ter exatamente ${bytes} bytes`,
+    );
+
 const envSchema = z
   .object({
     DATABASE_URL: z.url({
@@ -28,6 +38,10 @@ const envSchema = z
       .min(32, "JWT_SECRET deve ter ao menos 32 caracteres"),
     // Validade do token em segundos (curta: não há refresh token)
     JWT_EXPIRES_IN: z.coerce.number().int().positive().default(3600),
+    // Chave AES-256-GCM dos dados sensíveis em repouso: 32 bytes em base64
+    ENCRYPTION_KEY: base64Key(32, "ENCRYPTION_KEY"),
+    // Chave do HMAC usado na busca por CPF, separada da chave de cifra
+    CPF_HASH_KEY: base64Key(32, "CPF_HASH_KEY"),
   })
   .refine(
     (data) => data.NODE_ENV !== "production" || !data.CORS_ORIGIN.includes("*"),
