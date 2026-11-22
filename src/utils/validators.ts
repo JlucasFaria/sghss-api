@@ -1,5 +1,7 @@
 // Validadores reutilizáveis na borda da API: CPF, telefone e texto livre sem HTML
-import { z } from "zod";
+// Importado de @hono/zod-openapi (e não de "zod") para que os schemas já nasçam com
+// .openapi(): no Zod 4 os métodos são definidos na criação de cada schema
+import { z } from "@hono/zod-openapi";
 
 export const onlyDigits = (value: string) => value.replace(/\D/g, "");
 
@@ -71,3 +73,18 @@ export const emailSchema = z
   .toLowerCase()
   .max(254, "Deve ter no máximo 254 caracteres.")
   .pipe(z.email("E-mail inválido."));
+
+// Senha com letra e número; o máximo evita custo excessivo de hash com senhas gigantes (DoS)
+export const senhaSchema = z
+  .string()
+  .min(8, "A senha deve ter ao menos 8 caracteres.")
+  .max(128, "A senha deve ter no máximo 128 caracteres.")
+  .regex(/[A-Za-z]/, "A senha deve conter ao menos uma letra.")
+  .regex(/\d/, "A senha deve conter ao menos um número.");
+
+// Mensagem própria só para valor enviado e inválido: se o campo faltar, prevalece o
+// "Campo obrigatório." global. Uso: z.uuid(mensagem("Identificador inválido."))
+export const mensagem = (texto: string) => ({
+  error: (issue: { input: unknown }) =>
+    issue.input === undefined ? undefined : texto,
+});

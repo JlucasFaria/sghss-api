@@ -6,6 +6,14 @@ export const AcaoAuditoria = {
   CADASTRO_PACIENTE: "CADASTRO_PACIENTE",
   LOGIN: "LOGIN",
   LOGIN_FALHA: "LOGIN_FALHA",
+  UNIDADE_CRIADA: "UNIDADE_CRIADA",
+  UNIDADE_ATUALIZADA: "UNIDADE_ATUALIZADA",
+  UNIDADE_INATIVADA: "UNIDADE_INATIVADA",
+  PROFISSIONAL_CRIADO: "PROFISSIONAL_CRIADO",
+  PROFISSIONAL_ATUALIZADO: "PROFISSIONAL_ATUALIZADO",
+  PROFISSIONAL_INATIVADO: "PROFISSIONAL_INATIVADO",
+  HORARIO_ABERTO: "HORARIO_ABERTO",
+  HORARIO_ATUALIZADO: "HORARIO_ATUALIZADO",
 } as const;
 
 export type RegistroAuditoria = {
@@ -18,8 +26,13 @@ export type RegistroAuditoria = {
   detalhes?: Prisma.InputJsonObject;
 };
 
-// Aceita o cliente de uma transação para gravar o log junto com a ação auditada
+// Aceita o cliente de uma transação para gravar o log junto com a ação auditada.
+// Os campos são copiados um a um: dados extras de quem chama (ex.: o perfil do Ator)
+// nunca chegam à tabela.
 export const registrarAuditoria = (
-  registro: RegistroAuditoria,
+  { usuarioId, acao, entidade, entidadeId, ip, detalhes }: RegistroAuditoria,
   db: Prisma.TransactionClient = prisma,
-) => db.logAuditoria.create({ data: registro });
+) =>
+  db.logAuditoria.create({
+    data: { usuarioId, acao, entidade, entidadeId, ip, detalhes },
+  });

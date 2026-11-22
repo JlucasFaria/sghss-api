@@ -4,20 +4,14 @@ import { Perfil } from "../../../generated/prisma/client";
 import {
   cpfSchema,
   emailSchema,
+  mensagem,
   phoneSchema,
   safeText,
+  senhaSchema,
 } from "../../utils/validators";
 
-// Máximo evita custo excessivo de hash com senhas gigantes (DoS)
-const senhaSchema = z
-  .string()
-  .min(8, "A senha deve ter ao menos 8 caracteres.")
-  .max(128, "A senha deve ter no máximo 128 caracteres.")
-  .regex(/[A-Za-z]/, "A senha deve conter ao menos uma letra.")
-  .regex(/\d/, "A senha deve conter ao menos um número.");
-
 const dataNascimentoSchema = z.iso
-  .date("Data inválida. Use o formato AAAA-MM-DD.")
+  .date(mensagem("Data inválida. Use o formato AAAA-MM-DD."))
   .transform((value) => new Date(value))
   .refine(
     (date) => date <= new Date() && date.getUTCFullYear() >= 1900,
