@@ -14,7 +14,9 @@ import {
 } from "../auditoria/auditoria.service";
 import type {
   AgendarConsultaInput,
+  CancelarConsultaInput,
   ConsultaResponse,
+  ReagendarConsultaInput,
 } from "./consultas.schema";
 
 const referencia = { select: { id: true, nome: true } } as const;
@@ -195,6 +197,155 @@ export async function agendarConsulta(
     );
 
     return id;
+  });
+
+  return buscarConsultaCompleta(id, ator);
+}
+
+// ---------- Cancelamento e reagendamento (RF12) ----------
+
+// Prazo usual de clínicas para o horário poder ser oferecido a outro paciente
+const ANTECEDENCIA_MINIMA_HORAS = 24;
+
+// Carrega a consulta e confere se o ator participa dela. Quem não participa
+// recebe 404, para não descobrir quais consultas existem.
+async function buscarConsultaGerenciavel(
+  id: string,
+  ator: Ator,
+  db: Prisma.TransactionClient,
+) {
+  const consulta = await db.consulta.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      status: true,
+      pacienteId: true,
+      paciente: { select: { usuarioId: true } },
+      horario: {
+        select: {
+          id: true,
+          inicio: true,
+          profissionalId: true,
+          profissional: { select: { usuarioId: true } },
+        },
+      },
+    },
+  });
+
+  const ehPaciente = consulta?.paciente.usuarioId === ator.usuarioId;
+  const participa =
+    ehPaciente ||
+    consulta?.horario.profissional.usuarioId === ator.usuarioId ||
+    ator.perfil === Perfil.ADMIN;
+  if (!consulta || !participa) throw notFound("Consulta não encontrada.");
+
+  if (consulta.status !== StatusConsulta.AGENDADA) {
+    throw conflict(
+      "Só consultas agendadas podem ser canceladas ou reagendadas.",
+    );
+  }
+
+  // O prazo vale para o paciente; profissional e ADMIN tratam imprevistos
+  const horasAteConsulta =
+    (consulta.horario.inicio.getTime() - Date.now()) / (60 * 60 * 1000);
+  if (ehPaciente && horasAteConsulta < ANTECEDENCIA_MINIMA_HORAS) {
+    throw conflict(
+      `Cancelamento e reagendamento exigem ${ANTECEDENCIA_MINIMA_HORAS} horas de antecedência.`,
+    );
+  }
+
+  return consulta;
+}
+
+// Só muda a consulta se ela ainda estiver AGENDADA (evita corrida entre
+// cancelamento e reagendamento simultâneos)
+async function atualizarSeAgendada(
+  id: string,
+  data: Prisma.ConsultaUncheckedUpdateManyInput,
+  db: Prisma.TransactionClient,
+) {
+  const { count } = await db.consulta.updateMany({
+    where: { id, status: StatusConsulta.AGENDADA },
+    data,
+  });
+  if (count === 0)
+    throw conflict("A consulta foi alterada por outra operação.");
+}
+
+const liberarHorario = (horarioId: string, db: Prisma.TransactionClient) =>
+  db.horarioAgenda.update({
+    where: { id: horarioId },
+    data: { status: StatusHorario.DISPONIVEL },
+  });
+
+// Cancela e devolve o horário para a agenda
+export async function cancelarConsulta(
+  id: string,
+  { motivo }: CancelarConsultaInput,
+  ator: Ator,
+) {
+  await prisma.$transaction(async (tx) => {
+    const consulta = await buscarConsultaGerenciavel(id, ator, tx);
+
+    await atualizarSeAgendada(
+      id,
+      { status: StatusConsulta.CANCELADA, motivoCancelamento: motivo ?? null },
+      tx,
+    );
+    await liberarHorario(consulta.horario.id, tx);
+
+    await registrarAuditoria(
+      {
+        ...ator,
+        acao: AcaoAuditoria.CONSULTA_CANCELADA,
+        entidade: "consulta",
+        entidadeId: id,
+      },
+      tx,
+    );
+  });
+
+  return buscarConsultaCompleta(id, ator);
+}
+
+// Move a consulta para outro horário livre do mesmo profissional: reserva o
+// novo e libera o antigo na mesma transação
+export async function reagendarConsulta(
+  id: string,
+  { horarioId }: ReagendarConsultaInput,
+  ator: Ator,
+) {
+  await prisma.$transaction(async (tx) => {
+    const consulta = await buscarConsultaGerenciavel(id, ator, tx);
+    if (horarioId === consulta.horario.id) {
+      throw conflict("A consulta já está neste horário.");
+    }
+
+    await tx.$executeRaw`SELECT 1 FROM paciente WHERE id = ${consulta.pacienteId}::uuid FOR UPDATE`;
+
+    const novo = await buscarHorarioAgendavel(horarioId, tx);
+    if (novo.profissionalId !== consulta.horario.profissionalId) {
+      throw conflict("O novo horário deve ser do mesmo profissional.");
+    }
+    await exigirPacienteLivre(consulta.pacienteId, novo, tx, id);
+    await reservarHorario(horarioId, tx);
+
+    await atualizarSeAgendada(id, { horarioId }, tx);
+    await liberarHorario(consulta.horario.id, tx);
+
+    await registrarAuditoria(
+      {
+        ...ator,
+        acao: AcaoAuditoria.CONSULTA_REAGENDADA,
+        entidade: "consulta",
+        entidadeId: id,
+        detalhes: {
+          horarioAnteriorId: consulta.horario.id,
+          horarioNovoId: horarioId,
+        },
+      },
+      tx,
+    );
   });
 
   return buscarConsultaCompleta(id, ator);

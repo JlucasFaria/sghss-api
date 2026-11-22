@@ -37,3 +37,18 @@ export const consultaSchema = z
 
 export type AgendarConsultaInput = z.infer<typeof agendarConsultaSchema>;
 export type ConsultaResponse = z.infer<typeof consultaSchema>;
+
+export const cancelarConsultaSchema = z
+  .object({
+    motivo: safeText(500)
+      .optional()
+      .openapi({ example: "Imprevisto no trabalho" }),
+  })
+  .openapi("ConsultaCancelamento");
+
+export const reagendarConsultaSchema = z
+  .object({ horarioId: z.uuid(mensagem("Identificador inválido.")) })
+  .openapi("ConsultaReagendamento");
+
+export type CancelarConsultaInput = z.infer<typeof cancelarConsultaSchema>;
+export type ReagendarConsultaInput = z.infer<typeof reagendarConsultaSchema>;
