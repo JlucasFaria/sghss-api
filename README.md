@@ -63,7 +63,12 @@ bun run db:test:prepare
 
 # 3. Executar os testes
 bun test
+
+# Com relatório de cobertura (falha se algum arquivo ficar abaixo de 80% de linhas ou funções)
+bun run test:coverage
 ```
+
+O relatório em formato LCOV fica em `coverage/lcov.info`; no CI, ele é publicado como artefato de cada execução.
 
 ## Scripts
 
@@ -72,6 +77,7 @@ bun test
 | `bun run dev`             | Inicia a API com recarga automática           |
 | `bun run start`           | Inicia a API                                  |
 | `bun test`                | Executa os testes                             |
+| `bun run test:coverage`   | Executa os testes com relatório de cobertura  |
 | `bun run lint`            | Verifica o código com ESLint                  |
 | `bun run lint:fix`        | Corrige automaticamente problemas do ESLint   |
 | `bun run format`          | Formata o código com Prettier                 |
