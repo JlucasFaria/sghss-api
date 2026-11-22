@@ -14,6 +14,7 @@ import {
   AcaoAuditoria,
   registrarAuditoria,
 } from "../auditoria/auditoria.service";
+import { buscarIdDoPaciente } from "../pacientes/pacientes.service";
 import type {
   AgendarConsultaInput,
   CancelarConsultaInput,
@@ -164,23 +165,19 @@ export async function agendarConsulta(
   ator: Ator,
 ) {
   const id = await prisma.$transaction(async (tx) => {
-    const paciente = await tx.paciente.findUnique({
-      where: { usuarioId: ator.usuarioId },
-      select: { id: true },
-    });
-    if (!paciente) throw notFound("Paciente não encontrado.");
+    const pacienteId = await buscarIdDoPaciente(ator.usuarioId, tx);
 
     // Serializa os agendamentos do mesmo paciente até o fim da transação,
     // para a checagem de conflito não ser driblada por requisições simultâneas
-    await tx.$executeRaw`SELECT 1 FROM paciente WHERE id = ${paciente.id}::uuid FOR UPDATE`;
+    await tx.$executeRaw`SELECT 1 FROM paciente WHERE id = ${pacienteId}::uuid FOR UPDATE`;
 
     const horario = await buscarHorarioAgendavel(horarioId, tx);
-    await exigirPacienteLivre(paciente.id, horario, tx);
+    await exigirPacienteLivre(pacienteId, horario, tx);
     await reservarHorario(horarioId, tx);
 
     const { id } = await tx.consulta.create({
       data: {
-        pacienteId: paciente.id,
+        pacienteId,
         horarioId,
         unidadeId: horario.profissional.unidadeId,
         modalidade,

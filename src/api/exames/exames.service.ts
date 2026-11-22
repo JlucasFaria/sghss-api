@@ -14,6 +14,7 @@ import {
   AcaoAuditoria,
   registrarAuditoria,
 } from "../auditoria/auditoria.service";
+import { buscarIdDoPaciente } from "../pacientes/pacientes.service";
 import type {
   AgendarExameInput,
   ExameResponse,
@@ -65,11 +66,7 @@ export async function agendarExame(
   ator: Ator,
 ) {
   const id = await prisma.$transaction(async (tx) => {
-    const paciente = await tx.paciente.findUnique({
-      where: { usuarioId: ator.usuarioId },
-      select: { id: true },
-    });
-    if (!paciente) throw notFound("Paciente não encontrado.");
+    const pacienteId = await buscarIdDoPaciente(ator.usuarioId, tx);
 
     const unidade = await tx.unidade.findUnique({
       where: { id: unidadeId },
@@ -78,7 +75,7 @@ export async function agendarExame(
     if (!unidade?.ativo) throw badRequest("Unidade inexistente ou inativa.");
 
     const { id } = await tx.exame.create({
-      data: { pacienteId: paciente.id, unidadeId, tipo, dataHora },
+      data: { pacienteId, unidadeId, tipo, dataHora },
       select: { id: true },
     });
 

@@ -358,6 +358,23 @@ describe("GET /consultas", () => {
   });
 });
 
+describe("GET /consultas com filtro inválido", () => {
+  it("aponta só o campo inválido, sem o erro de período", async () => {
+    const res = await requisitar(
+      "GET",
+      "/consultas?de=2030-13-01&ate=2030-01-01",
+      {
+        token: paciente.token,
+      },
+    );
+
+    expect(res.status).toBe(400);
+    expect((await lerJson<ErrorResponse>(res)).error.details).toEqual([
+      { field: "de", message: "Data inválida. Use o formato AAAA-MM-DD." },
+    ]);
+  });
+});
+
 describe("GET /consultas/:id", () => {
   it("mostra a consulta aos participantes e 404 para os demais", async () => {
     const consulta = await criarConsulta({

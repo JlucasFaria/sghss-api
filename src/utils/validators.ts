@@ -106,3 +106,10 @@ export const dataHoraSchema = z.iso
     ...mensagem("Data e hora inválidas. Use ISO 8601 com fuso."),
   })
   .transform((value) => new Date(value));
+
+// Regras entre campos (refine do objeto) só rodam se os campos já são válidos: no Zod 4
+// o refine do objeto executa mesmo quando um campo falhou, com o valor ainda cru.
+// Uso: .refine(fn, { path, message, ...seSemErros })
+export const seSemErros = {
+  when: (payload: { issues: unknown[] }) => payload.issues.length === 0,
+};

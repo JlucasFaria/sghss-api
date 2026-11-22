@@ -5,7 +5,7 @@ import {
   StatusConsulta,
 } from "../../../generated/prisma/client";
 import { paginationQuerySchema } from "../../utils/pagination";
-import { mensagem, safeText } from "../../utils/validators";
+import { mensagem, safeText, seSemErros } from "../../utils/validators";
 
 const referencia = z.object({ id: z.uuid(), nome: z.string() });
 
@@ -70,6 +70,7 @@ export const listarConsultasQuerySchema = paginationQuerySchema
   .refine(({ de, ate }) => !de || !ate || de <= ate, {
     path: ["ate"],
     message: "A data final deve ser igual ou posterior à inicial.",
+    ...seSemErros,
   });
 
 export type ListarConsultasQuery = z.infer<typeof listarConsultasQuerySchema>;

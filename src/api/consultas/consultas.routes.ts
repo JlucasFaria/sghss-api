@@ -59,7 +59,7 @@ const cancelarRoute = createRoute({
   middleware: [authenticate],
   request: {
     params: idParamSchema,
-    body: { required: true, content: jsonContent(cancelarConsultaSchema) },
+    body: { required: false, content: jsonContent(cancelarConsultaSchema) },
   },
   responses: {
     200: { ...consultaResponse, description: "Consulta cancelada" },
