@@ -2,8 +2,8 @@
 // e encerramento, que conclui a consulta
 import {
   ModalidadeConsulta,
+  Prisma,
   StatusConsulta,
-  type Prisma,
 } from "../../../generated/prisma/client";
 import { prisma } from "../../db/client";
 import { badGateway, conflict, notFound } from "../../utils/app-error";
@@ -58,14 +58,27 @@ async function consultaDoProfissional(id: string, ator: Ator) {
   return consulta;
 }
 
-const exigirTeleconsultaAgendada = (consulta: ConsultaDaTeleconsulta) => {
+const exigirTelemedicina = (consulta: ConsultaDaTeleconsulta) => {
   if (consulta.modalidade !== ModalidadeConsulta.TELEMEDICINA) {
     throw conflict("A consulta não é de telemedicina.");
   }
+};
+
+const exigirTeleconsultaAgendada = (consulta: ConsultaDaTeleconsulta) => {
+  exigirTelemedicina(consulta);
   if (consulta.status !== StatusConsulta.AGENDADA) {
     throw conflict("A consulta não está agendada.");
   }
 };
+
+const MINUTO = 60 * 1000;
+// A sala abre 15 min antes do início e aceita entradas até 30 min após o fim previsto
+const ABERTURA_ANTECIPADA_MIN = 15;
+const TOLERANCIA_ATRASO_MIN = 30;
+
+// Fim da janela da teleconsulta: limite para criar a sala, entrar e validade do token
+const fimDaJanela = (consulta: ConsultaDaTeleconsulta) =>
+  new Date(consulta.horario.fim.getTime() + TOLERANCIA_ATRASO_MIN * MINUTO);
 
 // Falha do provedor externo vira 502, sem expor detalhes internos ao cliente
 async function chamarProvedor<T>(operacao: () => Promise<T>): Promise<T> {
@@ -93,8 +106,8 @@ export async function criarSala(consultaId: string, ator: Ator) {
     const { salaId: _, ...existente } = consulta.teleconsulta;
     return { criada: false, teleconsulta: existente };
   }
-  if (consulta.horario.fim <= new Date()) {
-    throw conflict("O horário da consulta já terminou.");
+  if (fimDaJanela(consulta) <= new Date()) {
+    throw conflict("A janela desta teleconsulta já terminou.");
   }
 
   const provedor = provedorVideo();
@@ -106,32 +119,41 @@ export async function criarSala(consultaId: string, ator: Ator) {
     }),
   );
 
-  const teleconsulta = await prisma.$transaction(async (tx) => {
-    const criada = await tx.teleconsulta.create({
-      data: { consultaId, provedor: provedor.nome, ...sala },
-      select: selecaoTeleconsulta,
+  try {
+    const teleconsulta = await prisma.$transaction(async (tx) => {
+      const criada = await tx.teleconsulta.create({
+        data: { consultaId, provedor: provedor.nome, ...sala },
+        select: selecaoTeleconsulta,
+      });
+      await registrarAuditoria(
+        {
+          ...ator,
+          acao: AcaoAuditoria.TELECONSULTA_CRIADA,
+          entidade: "consulta",
+          entidadeId: consultaId,
+        },
+        tx,
+      );
+      return criada;
     });
-    await registrarAuditoria(
-      {
-        ...ator,
-        acao: AcaoAuditoria.TELECONSULTA_CRIADA,
-        entidade: "consulta",
-        entidadeId: consultaId,
-      },
-      tx,
-    );
-    return criada;
-  });
-
-  return { criada: true, teleconsulta };
+    return { criada: true, teleconsulta };
+  } catch (error) {
+    // Duas criações simultâneas: a outra gravou primeiro; devolve a sala dela
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      const existente = await prisma.teleconsulta.findUniqueOrThrow({
+        where: { consultaId },
+        select: selecaoTeleconsulta,
+      });
+      return { criada: false, teleconsulta: existente };
+    }
+    throw error;
+  }
 }
 
 // ---------- Entrada e encerramento (RF19) ----------
-
-const MINUTO = 60 * 1000;
-// A sala abre 15 min antes do início e aceita entradas até 30 min após o fim previsto
-const ABERTURA_ANTECIPADA_MIN = 15;
-const TOLERANCIA_ATRASO_MIN = 30;
 
 // Sala existente e ainda não encerrada
 const exigirSalaAberta = (consulta: ConsultaDaTeleconsulta) => {
@@ -155,9 +177,7 @@ export async function entrarNaTeleconsulta(consultaId: string, ator: Ator) {
   const agora = Date.now();
   const abertura =
     consulta.horario.inicio.getTime() - ABERTURA_ANTECIPADA_MIN * MINUTO;
-  const expiraEm = new Date(
-    consulta.horario.fim.getTime() + TOLERANCIA_ATRASO_MIN * MINUTO,
-  );
+  const expiraEm = fimDaJanela(consulta);
   if (agora < abertura) {
     throw conflict(
       `A sala abre ${ABERTURA_ANTECIPADA_MIN} minutos antes do horário da consulta.`,
@@ -196,10 +216,14 @@ export async function entrarNaTeleconsulta(consultaId: string, ator: Ator) {
 }
 
 // Encerra a sala no provedor e conclui a consulta (REALIZADA). Só o profissional
-// da consulta, depois que a teleconsulta foi iniciada.
+// da consulta, depois que a teleconsulta foi iniciada. Se a consulta já foi
+// concluída pelo prontuário, só fecha a sala, sem mexer no status.
 export async function encerrarTeleconsulta(consultaId: string, ator: Ator) {
   const consulta = await consultaDoProfissional(consultaId, ator);
-  exigirTeleconsultaAgendada(consulta);
+  exigirTelemedicina(consulta);
+  if (consulta.status === StatusConsulta.CANCELADA) {
+    throw conflict("A consulta foi cancelada.");
+  }
   const sala = exigirSalaAberta(consulta);
   if (!sala.iniciadaEm) {
     throw conflict("Ninguém entrou na teleconsulta ainda.");
@@ -215,12 +239,14 @@ export async function encerrarTeleconsulta(consultaId: string, ator: Ator) {
     });
     if (count === 0) throw conflict("A teleconsulta já foi encerrada.");
 
+    // Condicional: não sobrescreve um cancelamento feito ao mesmo tempo
+    // (consulta já REALIZADA pelo prontuário continua REALIZADA)
     const concluida = await tx.consulta.updateMany({
-      where: { id: consultaId, status: StatusConsulta.AGENDADA },
+      where: { id: consultaId, status: { not: StatusConsulta.CANCELADA } },
       data: { status: StatusConsulta.REALIZADA },
     });
     if (concluida.count === 0) {
-      throw conflict("A consulta foi alterada por outra operação.");
+      throw conflict("A consulta foi cancelada por outra operação.");
     }
     await registrarAuditoria(
       {

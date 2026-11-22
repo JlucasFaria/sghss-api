@@ -300,3 +300,57 @@ describe("POST /consultas/:id/teleconsulta/encerramento", () => {
     expect(salva.status).toBe("AGENDADA");
   });
 });
+
+describe("casos de borda", () => {
+  it("criações simultâneas devolvem a mesma sala (201 e 200)", async () => {
+    const consulta = await teleconsultaEm(60);
+
+    const respostas = await Promise.all([
+      criarSala(consulta.id),
+      criarSala(consulta.id),
+    ]);
+
+    expect(respostas.map((r) => r.status).sort()).toEqual([200, 201]);
+    expect(await prisma.teleconsulta.count()).toBe(1);
+  });
+
+  it("permite criar a sala até 30 minutos após o fim, como a entrada", async () => {
+    const atrasada = await teleconsultaEm(-40); // terminou há 10 minutos
+    const encerrada = await teleconsultaEm(-70); // terminou há 40 minutos
+
+    expect((await criarSala(atrasada.id)).status).toBe(201);
+    expect((await criarSala(encerrada.id)).status).toBe(409);
+  });
+
+  it("fecha a sala de consulta já concluída pelo prontuário, sem mudar o status", async () => {
+    const consulta = await teleconsultaEm(5);
+    await criarSala(consulta.id);
+    await entrar(consulta.id, paciente.token);
+    await prisma.consulta.update({
+      where: { id: consulta.id },
+      data: { status: "REALIZADA" },
+    });
+
+    const res = await encerrar(consulta.id);
+    const { data } = await lerJson<{ data: Teleconsulta }>(res);
+    const salva = await prisma.consulta.findUniqueOrThrow({
+      where: { id: consulta.id },
+    });
+
+    expect(res.status).toBe(200);
+    expect(data.encerradaEm).not.toBeNull();
+    expect(salva.status).toBe("REALIZADA");
+  });
+
+  it("não encerra teleconsulta de consulta cancelada", async () => {
+    const consulta = await teleconsultaEm(5);
+    await criarSala(consulta.id);
+    await entrar(consulta.id, paciente.token);
+    await prisma.consulta.update({
+      where: { id: consulta.id },
+      data: { status: "CANCELADA" },
+    });
+
+    expect((await encerrar(consulta.id)).status).toBe(409);
+  });
+});
