@@ -63,3 +63,11 @@ export const safeText = (max = 255) =>
       (value) => !containsHtml(value),
       "Não é permitido HTML ou script neste campo.",
     );
+
+// E-mail normalizado (sem espaços e em minúsculas): a unicidade no banco diferencia maiúsculas
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(254, "Deve ter no máximo 254 caracteres.")
+  .pipe(z.email("E-mail inválido."));

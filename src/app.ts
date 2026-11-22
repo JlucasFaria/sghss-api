@@ -4,6 +4,7 @@ import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { requestId } from "hono/request-id";
 import { secureHeaders } from "hono/secure-headers";
+import { authRoutes } from "./api/auth/auth.routes";
 import { healthRoutes } from "./api/health/health.routes";
 import { env } from "./config/env";
 import { errorHandler, notFoundHandler } from "./middlewares/error-handler";
@@ -31,6 +32,7 @@ app.use(
 app.use(bodyLimit({ maxSize: BODY_LIMIT_BYTES }));
 
 app.route("/health", healthRoutes);
+app.route("/auth", authRoutes);
 
 app.doc("/openapi.json", {
   openapi: "3.0.0",

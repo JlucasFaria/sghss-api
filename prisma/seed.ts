@@ -6,6 +6,7 @@ import {
   TipoUnidade,
 } from "../generated/prisma/client";
 import { env } from "../src/config/env";
+import { TERMO_DE_USO } from "../src/config/termo-de-uso";
 import { prisma } from "../src/db/client";
 import { encrypt, hashCpf } from "../src/utils/crypto";
 import { hashPassword } from "../src/utils/password";
@@ -146,6 +147,13 @@ async function main() {
         cpfHash: hashCpf(cpf),
         dataNascimento,
         telefoneCifrado: encrypt(telefone),
+        consentimentos: {
+          create: {
+            finalidade: TERMO_DE_USO.finalidade,
+            versaoTermo: TERMO_DE_USO.versao,
+            ip: "127.0.0.1",
+          },
+        },
       },
     });
   }
