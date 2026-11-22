@@ -22,6 +22,12 @@ const envSchema = z
           .map((origin) => origin.trim())
           .filter(Boolean),
       ),
+    // Segredo HS256: ao menos 32 caracteres (256 bits) para resistir a força bruta
+    JWT_SECRET: z
+      .string()
+      .min(32, "JWT_SECRET deve ter ao menos 32 caracteres"),
+    // Validade do token em segundos (curta: não há refresh token)
+    JWT_EXPIRES_IN: z.coerce.number().int().positive().default(3600),
   })
   .refine(
     (data) => data.NODE_ENV !== "production" || !data.CORS_ORIGIN.includes("*"),

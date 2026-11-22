@@ -7,6 +7,7 @@ import {
 } from "../generated/prisma/client";
 import { env } from "../src/config/env";
 import { prisma } from "../src/db/client";
+import { hashPassword } from "../src/utils/password";
 
 // Senha comum a todos os usuários do seed (apenas desenvolvimento)
 const SENHA_PADRAO = "Vidaplus@2026";
@@ -75,7 +76,7 @@ async function main() {
     throw new Error("O seed não pode ser executado em produção.");
   }
 
-  const senhaHash = await Bun.password.hash(SENHA_PADRAO);
+  const senhaHash = await hashPassword(SENHA_PADRAO);
 
   for (const unidade of unidades) {
     await prisma.unidade.upsert({
