@@ -70,6 +70,10 @@ bun run test:coverage
 
 O relatório em formato LCOV fica em `coverage/lcov.info`; no CI, ele é publicado como artefato de cada execução.
 
+## Coleção Postman
+
+A pasta [`docs/postman`](docs/postman/README.md) tem a coleção com o fluxo autenticado e casos negativos, e o environment para rodar localmente.
+
 ## Scripts
 
 | Script                    | Descrição                                     |
