@@ -129,6 +129,27 @@ describe("consulta", () => {
     );
     expect(inexistente.status).toBe(404);
   });
+
+  it("pagina de forma estável quando a ordenação empata", async () => {
+    // Mesmo nome de unidade, ala e código: só o id desempata
+    for (let i = 0; i < 3; i++) {
+      const homonima = await criarUnidade({ nome: "Hospital Central" });
+      await criarLeito({ unidadeId: homonima.id, codigo: "A-1", ala: "UTI" });
+    }
+
+    const ids: string[] = [];
+    for (const page of [1, 2, 3]) {
+      const res = await requisitar("GET", `/leitos?limit=1&page=${page}`, {
+        token,
+      });
+      ids.push(
+        ...(await lerJson<{ data: Leito[] }>(res)).data.map((l) => l.id),
+      );
+    }
+
+    expect(new Set(ids).size).toBe(3);
+    expect(ids).toEqual([...ids].sort());
+  });
 });
 
 describe("atualização", () => {
@@ -142,6 +163,11 @@ describe("atualização", () => {
 
     const livre = await atualizar(leito.id, { status: "LIVRE" });
     expect((await lerJson<{ data: Leito }>(livre)).data.status).toBe("LIVRE");
+  });
+
+  it("responde 404 ao atualizar leito inexistente", async () => {
+    const res = await atualizar(crypto.randomUUID(), { status: "LIVRE" });
+    expect(res.status).toBe(404);
   });
 
   it("não aceita OCUPADO como status manual", async () => {

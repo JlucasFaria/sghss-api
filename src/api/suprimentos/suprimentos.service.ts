@@ -63,7 +63,8 @@ export async function listarSuprimentos({
     prisma.suprimento.findMany({
       where,
       select: selecao,
-      orderBy: [{ unidade: { nome: "asc" } }, { nome: "asc" }],
+      // id desempata itens de mesmo nome, para a paginação não repetir nem pular
+      orderBy: [{ unidade: { nome: "asc" } }, { nome: "asc" }, { id: "asc" }],
       ...toSkipTake(paginacao),
     }),
     prisma.suprimento.count({ where }),

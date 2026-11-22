@@ -52,6 +52,8 @@ export async function listarLeitos({
         { unidade: { nome: "asc" } },
         { ala: "asc" },
         { codigo: "asc" },
+        // Desempate estável entre páginas (unidades podem ter o mesmo nome)
+        { id: "asc" },
       ],
       ...toSkipTake(paginacao),
     }),
@@ -92,8 +94,6 @@ export function atualizarLeito(
   ator: Ator,
 ) {
   return prisma.$transaction(async (tx) => {
-    await buscarLeito(id, tx);
-
     const { count } = await tx.leito.updateMany({
       where: input.status
         ? { id, status: { not: StatusLeito.OCUPADO } }
@@ -101,6 +101,7 @@ export function atualizarLeito(
       data: input,
     });
     if (count === 0) {
+      await buscarLeito(id, tx); // 404 se o leito não existe
       throw conflict(
         "O status de um leito ocupado só muda com a alta ou a transferência do paciente.",
       );

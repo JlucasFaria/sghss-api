@@ -179,6 +179,23 @@ describe("movimentações", () => {
 });
 
 describe("listagem", () => {
+  it("pagina de forma estável com itens de mesmo nome", async () => {
+    for (let i = 0; i < 3; i++) await cadastrar();
+
+    const ids: string[] = [];
+    for (const page of [1, 2]) {
+      const res = await requisitar("GET", `/suprimentos?limit=2&page=${page}`, {
+        token,
+      });
+      ids.push(
+        ...(await lerJson<{ data: Suprimento[] }>(res)).data.map((s) => s.id),
+      );
+    }
+
+    expect(new Set(ids).size).toBe(3);
+    expect(ids).toEqual([...ids].sort());
+  });
+
   it("filtra os itens em alerta e por unidade", async () => {
     const baixo = await cadastrar(10);
     const ok = await cadastrar(1);

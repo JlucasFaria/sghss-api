@@ -138,15 +138,18 @@ describe("consultas por período", () => {
   });
 
   it("separa por unidade e filtra por unidade", async () => {
-    const primeira = await criarConsulta();
-    await criarConsulta();
-    const { inicio } = await prisma.horarioAgenda.findUniqueOrThrow({
-      where: { id: primeira.horarioId },
-    });
-    // Data da consulta no horário de Brasília (UTC−3)
-    const dia = new Date(inicio.getTime() - 3 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
+    // Horários fixos: com o horário padrão (agora + 24 h), as duas consultas
+    // poderiam cair em dias diferentes se o teste rodasse perto da meia-noite
+    const consultaEm = async (inicio: string) => {
+      const horario = await criarHorario({
+        inicio: new Date(inicio),
+        fim: new Date(new Date(inicio).getTime() + 30 * 60 * 1000),
+      });
+      return criarConsulta({ horarioId: horario.id });
+    };
+    const primeira = await consultaEm("2026-03-10T09:00:00-03:00");
+    await consultaEm("2026-03-10T10:00:00-03:00");
+    const dia = "2026-03-10";
 
     const todas = await gerar<Contagem>(`consultas?de=${dia}&ate=${dia}`);
     const filtrada = await gerar<Contagem>(
