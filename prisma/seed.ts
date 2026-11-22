@@ -6,7 +6,10 @@ import {
   TipoUnidade,
 } from "../generated/prisma/client";
 import { env } from "../src/config/env";
+import { TERMO_DE_USO } from "../src/config/termo-de-uso";
 import { prisma } from "../src/db/client";
+import { encrypt, hashCpf } from "../src/utils/crypto";
+import { hashPassword } from "../src/utils/password";
 
 // Senha comum a todos os usuários do seed (apenas desenvolvimento)
 const SENHA_PADRAO = "Vidaplus@2026";
@@ -63,6 +66,24 @@ const profissionais = [
   },
 ];
 
+// CPFs fictícios, com dígitos verificadores válidos
+const pacientes = [
+  {
+    email: "joao.pereira@vidaplus.example",
+    nome: "João Pereira",
+    cpf: "16899535009",
+    dataNascimento: new Date("1985-04-12"),
+    telefone: "41987654321",
+  },
+  {
+    email: "maria.santos@vidaplus.example",
+    nome: "Maria Santos",
+    cpf: "07187435045",
+    dataNascimento: new Date("1992-09-30"),
+    telefone: "41998765432",
+  },
+];
+
 const leitos = [
   { codigo: "ENF-101", ala: "Clínica Médica", tipo: TipoLeito.ENFERMARIA },
   { codigo: "ENF-102", ala: "Clínica Médica", tipo: TipoLeito.ENFERMARIA },
@@ -75,7 +96,7 @@ async function main() {
     throw new Error("O seed não pode ser executado em produção.");
   }
 
-  const senhaHash = await Bun.password.hash(SENHA_PADRAO);
+  const senhaHash = await hashPassword(SENHA_PADRAO);
 
   for (const unidade of unidades) {
     await prisma.unidade.upsert({
@@ -106,6 +127,34 @@ async function main() {
       where: { usuarioId: usuario.id },
       update: {},
       create: { ...profissional, usuarioId: usuario.id },
+    });
+  }
+
+  for (const { email, nome, cpf, dataNascimento, telefone } of pacientes) {
+    const usuario = await prisma.usuario.upsert({
+      where: { email },
+      update: {},
+      create: { email, senhaHash, perfil: Perfil.PACIENTE },
+    });
+
+    await prisma.paciente.upsert({
+      where: { usuarioId: usuario.id },
+      update: {},
+      create: {
+        usuarioId: usuario.id,
+        nome,
+        cpfCifrado: encrypt(cpf),
+        cpfHash: hashCpf(cpf),
+        dataNascimento,
+        telefoneCifrado: encrypt(telefone),
+        consentimentos: {
+          create: {
+            finalidade: TERMO_DE_USO.finalidade,
+            versaoTermo: TERMO_DE_USO.versao,
+            ip: "127.0.0.1",
+          },
+        },
+      },
     });
   }
 

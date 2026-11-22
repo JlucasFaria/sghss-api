@@ -7,6 +7,8 @@ import {
   type Prisma,
 } from "../../generated/prisma/client";
 import { prisma } from "../db/client";
+import { encrypt, hashCpf } from "../utils/crypto";
+import { isValidCpf } from "../utils/validators";
 
 // Sufixo único para campos com restrição de unicidade
 const unique = () => crypto.randomUUID().slice(0, 8);
@@ -57,6 +59,35 @@ export async function criarProfissional(
       ...data,
       usuarioId,
       unidadeId,
+    },
+  });
+}
+
+// CPF aleatório válido: sorteia 9 dígitos e procura os 2 verificadores
+export function gerarCpf(): string {
+  const base = String(Math.floor(Math.random() * 1e9)).padStart(9, "0");
+  for (let dv = 0; dv < 100; dv++) {
+    const cpf = base + String(dv).padStart(2, "0");
+    if (isValidCpf(cpf)) return cpf;
+  }
+  return gerarCpf(); // base inválida (ex.: dígitos repetidos)
+}
+
+// Recebe o CPF em claro e grava cifrado + hash, como o serviço fará
+export async function criarPaciente({
+  cpf = gerarCpf(),
+  ...data
+}: Partial<Prisma.PacienteUncheckedCreateInput> & { cpf?: string } = {}) {
+  const usuarioId = data.usuarioId ?? (await criarUsuario()).id;
+
+  return prisma.paciente.create({
+    data: {
+      nome: "Paciente de Teste",
+      cpfCifrado: encrypt(cpf),
+      cpfHash: hashCpf(cpf),
+      dataNascimento: new Date("1990-01-01"),
+      ...data,
+      usuarioId,
     },
   });
 }

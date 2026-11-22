@@ -7,3 +7,8 @@ export const createRouter = () =>
       if (!result.success) throw result.error;
     },
   });
+
+// Atalho para o bloco "content" de requisições e respostas JSON na definição das rotas
+export const jsonContent = <T>(schema: T) => ({
+  "application/json": { schema },
+});

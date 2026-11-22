@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { z } from "zod";
-import { cpfSchema, isValidCpf, phoneSchema, safeText } from "../validators";
+import {
+  cpfSchema,
+  emailSchema,
+  isValidCpf,
+  phoneSchema,
+  safeText,
+} from "../validators";
 
 describe("isValidCpf", () => {
   it.each(["529.982.247-25", "52998224725", "111.444.777-35"])(
@@ -109,4 +115,19 @@ describe("safeText", () => {
     expect(safeText(5).safeParse("   ").success).toBe(false);
     expect(safeText(5).safeParse("123456").success).toBe(false);
   });
+});
+
+describe("emailSchema", () => {
+  it("normaliza espaços e maiúsculas", () => {
+    expect(emailSchema.parse("  Ana.Souza@Exemplo.COM ")).toBe(
+      "ana.souza@exemplo.com",
+    );
+  });
+
+  it.each(["ana", "ana@", "@exemplo.com", "ana souza@exemplo.com"])(
+    "rejeita e-mail inválido: %s",
+    (email) => {
+      expect(emailSchema.safeParse(email).success).toBe(false);
+    },
+  );
 });
