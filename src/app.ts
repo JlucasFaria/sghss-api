@@ -11,6 +11,7 @@ import { consultasRoutes } from "./api/consultas/consultas.routes";
 import { examesRoutes } from "./api/exames/exames.routes";
 import { notificacoesRoutes } from "./api/notificacoes/notificacoes.routes";
 import { healthRoutes } from "./api/health/health.routes";
+import { lgpdRoutes } from "./api/lgpd/lgpd.routes";
 import { pacientesRoutes } from "./api/pacientes/pacientes.routes";
 import { prontuarioRoutes } from "./api/prontuario/prontuario.routes";
 import {
@@ -51,6 +52,7 @@ app.route("/unidades", unidadesRoutes);
 app.route("/profissionais", profissionaisRoutes);
 app.route("/profissionais", agendaRoutes);
 app.route("/pacientes", pacientesRoutes);
+app.route("/pacientes", lgpdRoutes);
 app.route("/consultas", consultasRoutes);
 app.route("/consultas", prontuarioRoutes);
 app.route("/consultas", emissaoReceitaRoutes);
