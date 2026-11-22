@@ -12,6 +12,7 @@ import {
   lerJson,
   requisitar,
   tokenDe,
+  tokenDoProfissional,
 } from "../../../test/http";
 import { formatarDataHora } from "../../../utils/datas";
 import type { PaginationMeta } from "../../../utils/pagination";
@@ -151,6 +152,48 @@ describe("gerarLembretes", () => {
     expect(
       await prisma.notificacao.count({ where: { tipo: "LEMBRETE_CONSULTA" } }),
     ).toBe(1);
+  });
+
+  it("lembra de novo a consulta reagendada depois do primeiro lembrete", async () => {
+    const consulta = await consultaEm(10);
+    await gerarLembretes();
+    const novoHorario = await horarioEm(15);
+
+    // A menos de 24 horas, quem reagenda é o profissional (o paciente tem o prazo)
+    const reagendamento = await requisitar(
+      "POST",
+      `/consultas/${consulta.id}/reagendamento`,
+      {
+        token: await tokenDoProfissional(medico),
+        body: { horarioId: novoHorario.id },
+      },
+    );
+    const total = await gerarLembretes();
+    const lembretes = await prisma.notificacao.findMany({
+      where: { tipo: "LEMBRETE_CONSULTA" },
+      orderBy: { criadoEm: "asc" },
+    });
+
+    expect(reagendamento.status).toBe(200);
+    expect(total).toBe(1);
+    expect(lembretes).toHaveLength(2);
+    expect(lembretes[1]?.mensagem).toContain(
+      formatarDataHora(novoHorario.inicio),
+    );
+  });
+
+  it("processa em lotes: o que sobra fica para a rodada seguinte", async () => {
+    await consultaEm(5);
+    await consultaEm(10);
+    await consultaEm(15);
+
+    const rodadas = [
+      await gerarLembretes(new Date(), 2),
+      await gerarLembretes(new Date(), 2),
+      await gerarLembretes(new Date(), 2),
+    ];
+
+    expect(rodadas).toEqual([2, 1, 0]);
   });
 
   it("execuções simultâneas não duplicam lembretes", async () => {

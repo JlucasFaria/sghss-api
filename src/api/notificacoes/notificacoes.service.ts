@@ -81,36 +81,60 @@ export async function notificarConsulta(
 const ANTECEDENCIA_LEMBRETE_MS = 24 * 60 * 60 * 1000;
 // Chave da trava da rotina no PostgreSQL (qualquer número fixo e exclusivo da rotina)
 const TRAVA_LEMBRETES = 20_201;
+// Por rodada: o restante fica para a próxima (15 min depois), sem transações longas
+const LOTE_LEMBRETES = 500;
+const PRAZO_TRANSACAO_MS = 60_000;
 
 // Lembra as consultas agendadas que começam nas próximas 24 horas e ainda não foram
-// lembradas. A trava transacional garante uma execução por vez, mesmo com várias
-// instâncias da API. Devolve quantos lembretes foram gerados.
-export function gerarLembretes(agora = new Date()) {
-  return prisma.$transaction(async (tx) => {
-    const [trava] = await tx.$queryRaw<{ obtida: boolean }[]>`
-      SELECT pg_try_advisory_xact_lock(${TRAVA_LEMBRETES}) AS obtida
-    `;
-    if (!trava?.obtida) return 0;
+// lembradas para o horário atual. A trava transacional garante uma execução por vez,
+// mesmo com várias instâncias da API. Devolve quantos lembretes foram gerados.
+export function gerarLembretes(agora = new Date(), lote = LOTE_LEMBRETES) {
+  return prisma.$transaction(
+    async (tx) => {
+      const [trava] = await tx.$queryRaw<{ obtida: boolean }[]>`
+        SELECT pg_try_advisory_xact_lock(${TRAVA_LEMBRETES}) AS obtida
+      `;
+      if (!trava?.obtida) return 0;
 
-    const consultas = await tx.consulta.findMany({
-      where: {
-        status: StatusConsulta.AGENDADA,
-        horario: {
-          inicio: {
-            gt: agora,
-            lte: new Date(agora.getTime() + ANTECEDENCIA_LEMBRETE_MS),
+      const candidatas = await tx.consulta.findMany({
+        where: {
+          status: StatusConsulta.AGENDADA,
+          horario: {
+            inicio: {
+              gt: agora,
+              lte: new Date(agora.getTime() + ANTECEDENCIA_LEMBRETE_MS),
+            },
           },
         },
-        notificacoes: { none: { tipo: TipoNotificacao.LEMBRETE_CONSULTA } },
-      },
-      select: { id: true },
-    });
+        select: {
+          id: true,
+          atualizadoEm: true,
+          notificacoes: {
+            where: { tipo: TipoNotificacao.LEMBRETE_CONSULTA },
+            orderBy: { criadoEm: "desc" },
+            take: 1,
+            select: { criadoEm: true },
+          },
+        },
+        orderBy: { horario: { inicio: "asc" } },
+      });
 
-    for (const { id } of consultas) {
-      await notificarConsulta(id, TipoNotificacao.LEMBRETE_CONSULTA, tx);
-    }
-    return consultas.length;
-  });
+      // Já lembrada só se o último lembrete é posterior à última alteração da
+      // consulta: uma consulta agendada só muda no reagendamento, que pede novo lembrete
+      const pendentes = candidatas
+        .filter(
+          ({ atualizadoEm, notificacoes: [ultimo] }) =>
+            !ultimo || ultimo.criadoEm < atualizadoEm,
+        )
+        .slice(0, lote);
+
+      for (const { id } of pendentes) {
+        await notificarConsulta(id, TipoNotificacao.LEMBRETE_CONSULTA, tx);
+      }
+      return pendentes.length;
+    },
+    { timeout: PRAZO_TRANSACAO_MS },
+  );
 }
 
 // ---------- Consulta pelo usuário (RF21) ----------
