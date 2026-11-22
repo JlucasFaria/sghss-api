@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { Perfil } from "../../../../generated/prisma/client";
 import { prisma } from "../../../db/client";
 import { resetDatabase } from "../../../test/db";
-import { criarUnidade } from "../../../test/factories";
+import {
+  criarLeito,
+  criarPaciente,
+  criarUnidade,
+} from "../../../test/factories";
 import { autenticar, lerJson, requisitar } from "../../../test/http";
 import type { PaginationMeta } from "../../../utils/pagination";
 import type { ErrorResponse } from "../../../utils/response";
@@ -166,6 +170,44 @@ describe("PUT e DELETE /unidades/:id", () => {
     expect(removida.status).toBe(204);
     expect(inativa.ativo).toBe(false);
     expect((await lerJson<{ data: Unidade }>(reativada)).data.ativo).toBe(true);
+  });
+
+  it("recusa inativar unidade com paciente internado, até a alta", async () => {
+    const unidade = await criarUnidade();
+    const leito = await criarLeito({
+      unidadeId: unidade.id,
+      status: "OCUPADO",
+    });
+    const internacao = await prisma.internacao.create({
+      data: {
+        pacienteId: (await criarPaciente()).id,
+        leitoId: leito.id,
+        motivo: "Observação",
+      },
+    });
+
+    const porDelete = await requisitar("DELETE", `/unidades/${unidade.id}`, {
+      token: admin,
+    });
+    const porPut = await requisitar("PUT", `/unidades/${unidade.id}`, {
+      token: admin,
+      body: { ...dados, ativo: false },
+    });
+    expect(porDelete.status).toBe(409);
+    expect(porPut.status).toBe(409);
+    expect(
+      (await prisma.unidade.findUniqueOrThrow({ where: { id: unidade.id } }))
+        .ativo,
+    ).toBe(true);
+
+    await prisma.internacao.update({
+      where: { id: internacao.id },
+      data: { altaEm: new Date() },
+    });
+    const depoisDaAlta = await requisitar("DELETE", `/unidades/${unidade.id}`, {
+      token: admin,
+    });
+    expect(depoisDaAlta.status).toBe(204);
   });
 
   it("responde 404 ao inativar unidade inexistente", async () => {

@@ -37,6 +37,22 @@ const filtroSituacao = {
   ENCERRADA: { not: null },
 } satisfies Record<string, Prisma.InternacaoWhereInput["altaEm"]>;
 
+// Impede inativar uma unidade com pacientes internados: eles ficariam em uma
+// unidade inativa e sumiriam do relatório de ocupação. O ADMIN dá alta ou transfere antes.
+export async function exigirSemInternacoesAtivas(
+  unidadeId: string,
+  db: Prisma.TransactionClient,
+) {
+  const total = await db.internacao.count({
+    where: { altaEm: null, leito: { unidadeId } },
+  });
+  if (total > 0) {
+    throw conflict(
+      `Há ${total} paciente(s) internado(s). Dê alta ou transfira antes de inativar.`,
+    );
+  }
+}
+
 export async function listarInternacoes({
   situacao,
   unidadeId,
