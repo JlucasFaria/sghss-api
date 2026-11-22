@@ -139,7 +139,7 @@ export function gerarLembretes(agora = new Date(), lote = LOTE_LEMBRETES) {
 
 // ---------- Consulta pelo usuário (RF21) ----------
 
-const selecaoNotificacao = {
+export const selecaoNotificacao = {
   id: true,
   tipo: true,
   titulo: true,

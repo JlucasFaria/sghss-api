@@ -15,7 +15,8 @@ import {
   registrarConsentimento,
   revogarConsentimento,
 } from "./consentimentos.service";
-import { consentimentoSchema } from "./lgpd.schema";
+import { consentimentoSchema, dadosDoTitularSchema } from "./lgpd.schema";
+import { exportarMeusDados } from "./titular.service";
 
 const base = {
   tags: ["LGPD"],
@@ -68,6 +69,22 @@ const revogarConsentimentoRoute = createRoute({
   },
 });
 
+const exportarDadosRoute = createRoute({
+  ...base,
+  method: "get",
+  path: "/me/dados",
+  summary: "Exporta todos os dados do paciente autenticado (portabilidade)",
+  description:
+    "JSON com conta, cadastro, consentimentos, histórico clínico, prontuário e notificações, enviado como arquivo para download. A exportação é auditada.",
+  responses: {
+    200: {
+      description: "Dados do titular",
+      content: jsonContent(dataResponseSchema(dadosDoTitularSchema)),
+    },
+    ...errorResponses(401, 403, 404),
+  },
+});
+
 export const lgpdRoutes = createRouter()
   .openapi(listarConsentimentosRoute, async (c) => {
     const consentimentos = await listarConsentimentos(c.get("usuario").id);
@@ -80,4 +97,10 @@ export const lgpdRoutes = createRouter()
   .openapi(revogarConsentimentoRoute, async (c) => {
     await revogarConsentimento(c.req.valid("param").id, getAtor(c));
     return c.body(null, 204);
+  })
+  .openapi(exportarDadosRoute, async (c) => {
+    const dados = await exportarMeusDados(getAtor(c));
+    c.header("Content-Disposition", 'attachment; filename="meus-dados.json"');
+    c.header("Cache-Control", "no-store");
+    return c.json({ data: dados }, 200);
   });
