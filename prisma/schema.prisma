@@ -47,8 +47,9 @@ model Usuario {
   criadoEm     DateTime @default(now()) @map("criado_em")
   atualizadoEm DateTime @updatedAt @map("atualizado_em")
 
-  paciente     Paciente?
-  profissional Profissional?
+  paciente      Paciente?
+  profissional  Profissional?
+  movimentacoes MovimentacaoEstoque[]
 
   @@map("usuario")
 }
@@ -67,6 +68,8 @@ model Unidade {
   profissionais Profissional[]
   consultas     Consulta[]
   exames        Exame[]
+  leitos        Leito[]
+  suprimentos   Suprimento[]
 
   @@map("unidade")
 }
@@ -85,9 +88,10 @@ model Paciente {
   criadoEm        DateTime  @default(now()) @map("criado_em")
   atualizadoEm    DateTime  @updatedAt @map("atualizado_em")
 
-  usuario   Usuario    @relation(fields: [usuarioId], references: [id])
-  consultas Consulta[]
-  exames    Exame[]
+  usuario     Usuario      @relation(fields: [usuarioId], references: [id])
+  consultas   Consulta[]
+  exames      Exame[]
+  internacoes Internacao[]
 
   @@map("paciente")
 }
@@ -264,4 +268,96 @@ model ItemPrescricao {
   prescricao Prescricao @relation(fields: [prescricaoId], references: [id], onDelete: Cascade)
 
   @@map("item_prescricao")
+}
+
+// ---------- Administração hospitalar ----------
+
+enum TipoLeito {
+  ENFERMARIA
+  APARTAMENTO
+  UTI
+
+  @@map("tipo_leito")
+}
+
+enum StatusLeito {
+  LIVRE
+  OCUPADO
+  MANUTENCAO
+
+  @@map("status_leito")
+}
+
+enum TipoMovimentacao {
+  ENTRADA
+  SAIDA
+
+  @@map("tipo_movimentacao")
+}
+
+model Leito {
+  id           String      @id @default(uuid()) @db.Uuid
+  unidadeId    String      @map("unidade_id") @db.Uuid
+  codigo       String      @db.VarChar(20)
+  ala          String      @db.VarChar(100)
+  tipo         TipoLeito
+  status       StatusLeito @default(LIVRE)
+  criadoEm     DateTime    @default(now()) @map("criado_em")
+  atualizadoEm DateTime    @updatedAt @map("atualizado_em")
+
+  unidade     Unidade      @relation(fields: [unidadeId], references: [id])
+  internacoes Internacao[]
+
+  @@unique([unidadeId, codigo])
+  @@map("leito")
+}
+
+// Aponta para o leito atual; internar, transferir e dar alta atualizam a
+// internação e o status dos leitos na mesma transação.
+model Internacao {
+  id           String    @id @default(uuid()) @db.Uuid
+  pacienteId   String    @map("paciente_id") @db.Uuid
+  leitoId      String    @map("leito_id") @db.Uuid
+  motivo       String    @db.VarChar(500)
+  admitidoEm   DateTime  @default(now()) @map("admitido_em")
+  altaEm       DateTime? @map("alta_em")
+  criadoEm     DateTime  @default(now()) @map("criado_em")
+  atualizadoEm DateTime  @updatedAt @map("atualizado_em")
+
+  paciente Paciente @relation(fields: [pacienteId], references: [id])
+  leito    Leito    @relation(fields: [leitoId], references: [id])
+
+  @@map("internacao")
+}
+
+// Opcional (RF30): modelado no banco, implementação condicionada ao tempo.
+model Suprimento {
+  id            String   @id @default(uuid()) @db.Uuid
+  unidadeId     String   @map("unidade_id") @db.Uuid
+  nome          String   @db.VarChar(150)
+  unidadeMedida String   @map("unidade_medida") @db.VarChar(20)
+  quantidade    Int      @default(0)
+  estoqueMinimo Int      @default(0) @map("estoque_minimo")
+  criadoEm      DateTime @default(now()) @map("criado_em")
+  atualizadoEm  DateTime @updatedAt @map("atualizado_em")
+
+  unidade       Unidade               @relation(fields: [unidadeId], references: [id])
+  movimentacoes MovimentacaoEstoque[]
+
+  @@map("suprimento")
+}
+
+model MovimentacaoEstoque {
+  id            String           @id @default(uuid()) @db.Uuid
+  suprimentoId  String           @map("suprimento_id") @db.Uuid
+  responsavelId String           @map("responsavel_id") @db.Uuid
+  tipo          TipoMovimentacao
+  quantidade    Int
+  observacao    String?          @db.VarChar(500)
+  criadoEm      DateTime         @default(now()) @map("criado_em")
+
+  suprimento  Suprimento @relation(fields: [suprimentoId], references: [id])
+  responsavel Usuario    @relation(fields: [responsavelId], references: [id])
+
+  @@map("movimentacao_estoque")
 }
