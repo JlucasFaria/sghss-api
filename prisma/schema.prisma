@@ -103,10 +103,11 @@ model Profissional {
   criadoEm      DateTime @default(now()) @map("criado_em")
   atualizadoEm  DateTime @updatedAt @map("atualizado_em")
 
-  usuario  Usuario         @relation(fields: [usuarioId], references: [id])
-  unidade  Unidade         @relation(fields: [unidadeId], references: [id])
-  horarios HorarioAgenda[]
-  exames   Exame[]
+  usuario   Usuario              @relation(fields: [usuarioId], references: [id])
+  unidade   Unidade              @relation(fields: [unidadeId], references: [id])
+  horarios  HorarioAgenda[]
+  exames    Exame[]
+  registros RegistroProntuario[]
 
   @@unique([conselho, registro])
   @@map("profissional")
@@ -174,10 +175,12 @@ model Consulta {
   criadoEm           DateTime           @default(now()) @map("criado_em")
   atualizadoEm       DateTime           @updatedAt @map("atualizado_em")
 
-  paciente     Paciente      @relation(fields: [pacienteId], references: [id])
-  horario      HorarioAgenda @relation(fields: [horarioId], references: [id])
-  unidade      Unidade       @relation(fields: [unidadeId], references: [id])
+  paciente     Paciente             @relation(fields: [pacienteId], references: [id])
+  horario      HorarioAgenda        @relation(fields: [horarioId], references: [id])
+  unidade      Unidade              @relation(fields: [unidadeId], references: [id])
   teleconsulta Teleconsulta?
+  registros    RegistroProntuario[]
+  prescricoes  Prescricao[]
 
   @@map("consulta")
 }
@@ -216,4 +219,49 @@ model Exame {
   responsavel Profissional? @relation(fields: [responsavelId], references: [id])
 
   @@map("exame")
+}
+
+// ---------- Prontuário e receitas ----------
+
+// Somente inclusão: correções geram um novo registro, preservando o histórico.
+// O autor pode ser outro profissional além do responsável pela consulta.
+model RegistroProntuario {
+  id              String   @id @default(uuid()) @db.Uuid
+  consultaId      String   @map("consulta_id") @db.Uuid
+  autorId         String   @map("autor_id") @db.Uuid
+  conteudoCifrado String   @map("conteudo_cifrado")
+  criadoEm        DateTime @default(now()) @map("criado_em")
+
+  consulta Consulta     @relation(fields: [consultaId], references: [id])
+  autor    Profissional @relation(fields: [autorId], references: [id])
+
+  @@map("registro_prontuario")
+}
+
+// O banco guarda só o SHA-256 do código de verificação aleatório entregue na emissão.
+model Prescricao {
+  id                    String   @id @default(uuid()) @db.Uuid
+  consultaId            String   @map("consulta_id") @db.Uuid
+  codigoVerificacaoHash String   @unique @map("codigo_verificacao_hash") @db.Char(64)
+  observacoes           String?  @db.VarChar(1000)
+  emitidaEm             DateTime @default(now()) @map("emitida_em")
+  validaAte             DateTime @map("valida_ate") @db.Date
+
+  consulta Consulta         @relation(fields: [consultaId], references: [id])
+  itens    ItemPrescricao[]
+
+  @@map("prescricao")
+}
+
+model ItemPrescricao {
+  id           String @id @default(uuid()) @db.Uuid
+  prescricaoId String @map("prescricao_id") @db.Uuid
+  medicamento  String @db.VarChar(150)
+  dosagem      String @db.VarChar(100)
+  posologia    String @db.VarChar(500)
+  quantidade   Int
+
+  prescricao Prescricao @relation(fields: [prescricaoId], references: [id], onDelete: Cascade)
+
+  @@map("item_prescricao")
 }
