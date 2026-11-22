@@ -20,6 +20,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "test": "bun test",
     "docs:diagramas": "docker run --rm -v ./docs/diagramas:/data plantuml/plantuml:1.2026.10 -tpng -charset UTF-8 '/data/*.puml'"

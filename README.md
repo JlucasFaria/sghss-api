@@ -40,7 +40,11 @@ cp .env.example .env
 # 3. Subir o PostgreSQL
 bun run db:up
 
-# 4. Iniciar a API em modo desenvolvimento
+# 4. Aplicar as migrations e popular o banco com dados fictícios
+bun run db:deploy
+bun run db:seed
+
+# 5. Iniciar a API em modo desenvolvimento
 bun run dev
 ```
 
@@ -65,6 +69,7 @@ A API sobe em `http://localhost:3000`. Para verificar: `GET /health`.
 | `bun run db:generate`    | Gera o Prisma Client                         |
 | `bun run db:migrate`     | Cria e aplica migrations em desenvolvimento  |
 | `bun run db:deploy`      | Aplica migrations pendentes (CI/produção)    |
+| `bun run db:seed`        | Popula o banco com dados fictícios (dev)     |
 | `bun run db:studio`      | Abre o Prisma Studio                         |
 | `bun run docs:diagramas` | Gera os PNGs dos diagramas PlantUML (Docker) |
 
