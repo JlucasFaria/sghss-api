@@ -21,3 +21,11 @@ export const dataDeHoje = (agora = new Date()) =>
 // Soma dias a uma data AAAA-MM-DD; devolve Date à meia-noite UTC (formato das colunas date)
 export const somarDias = (data: string, dias: number) =>
   new Date(new Date(data).getTime() + dias * DIA_MS);
+
+// "22/11/2026 às 14:30" no horário de Brasília, para mensagens ao usuário
+export const formatarDataHora = (data: Date) => {
+  const iso = new Date(
+    data.getTime() - HORAS_ATRAS_DO_UTC * 60 * 60 * 1000,
+  ).toISOString();
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)} às ${iso.slice(11, 16)}`;
+};

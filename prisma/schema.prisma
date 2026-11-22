@@ -191,6 +191,7 @@ model Consulta {
   teleconsulta Teleconsulta?
   registros    RegistroProntuario[]
   prescricoes  Prescricao[]
+  notificacoes Notificacao[]
 
   @@index([pacienteId, status])
   @@index([horarioId])
@@ -412,23 +413,28 @@ model LancamentoFinanceiro {
 enum TipoNotificacao {
   CONSULTA_AGENDADA
   CONSULTA_CANCELADA
+  CONSULTA_REAGENDADA
   LEMBRETE_CONSULTA
 
   @@map("tipo_notificacao")
 }
 
 model Notificacao {
-  id        String          @id @default(uuid()) @db.Uuid
-  usuarioId String          @map("usuario_id") @db.Uuid
-  tipo      TipoNotificacao
-  titulo    String          @db.VarChar(150)
-  mensagem  String          @db.VarChar(500)
-  lidaEm    DateTime?       @map("lida_em")
-  criadoEm  DateTime        @default(now()) @map("criado_em")
+  id         String          @id @default(uuid()) @db.Uuid
+  usuarioId  String          @map("usuario_id") @db.Uuid
+  // Consulta a que a notificação se refere (permite não repetir lembretes)
+  consultaId String?         @map("consulta_id") @db.Uuid
+  tipo       TipoNotificacao
+  titulo     String          @db.VarChar(150)
+  mensagem   String          @db.VarChar(500)
+  lidaEm     DateTime?       @map("lida_em")
+  criadoEm   DateTime        @default(now()) @map("criado_em")
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  usuario  Usuario   @relation(fields: [usuarioId], references: [id])
+  consulta Consulta? @relation(fields: [consultaId], references: [id])
 
   @@index([usuarioId, criadoEm])
+  @@index([consultaId])
   @@map("notificacao")
 }
 

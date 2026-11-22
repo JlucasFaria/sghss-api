@@ -3,6 +3,7 @@ import {
   Perfil,
   StatusConsulta,
   StatusHorario,
+  TipoNotificacao,
   type Prisma,
 } from "../../../generated/prisma/client";
 import { prisma } from "../../db/client";
@@ -14,6 +15,7 @@ import {
   AcaoAuditoria,
   registrarAuditoria,
 } from "../auditoria/auditoria.service";
+import { notificarConsulta } from "../notificacoes/notificacoes.service";
 import { buscarIdDoPaciente } from "../pacientes/pacientes.service";
 import type {
   AgendarConsultaInput,
@@ -195,6 +197,7 @@ export async function agendarConsulta(
       },
       tx,
     );
+    await notificarConsulta(id, TipoNotificacao.CONSULTA_AGENDADA, tx);
 
     return id;
   });
@@ -303,6 +306,7 @@ export async function cancelarConsulta(
       },
       tx,
     );
+    await notificarConsulta(id, TipoNotificacao.CONSULTA_CANCELADA, tx);
   });
 
   return buscarConsultaCompleta(id, ator);
@@ -346,6 +350,7 @@ export async function reagendarConsulta(
       },
       tx,
     );
+    await notificarConsulta(id, TipoNotificacao.CONSULTA_REAGENDADA, tx);
   });
 
   return buscarConsultaCompleta(id, ator);

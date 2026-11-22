@@ -239,6 +239,7 @@ Profissional "0..1" -- "0..*" Exame : registra resultado >
 Consulta "1" *-- "0..*" RegistroProntuario
 Profissional "1" -- "0..*" RegistroProntuario : escreve >
 Consulta "1" -- "0..*" Prescricao : origina >
+Consulta "0..1" -- "0..*" Notificacao : referencia <
 Prescricao "1" *-- "1..*" ItemPrescricao
 
 Paciente "1" -- "0..*" Internacao
