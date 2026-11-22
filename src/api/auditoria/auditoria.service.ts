@@ -1,6 +1,11 @@
 // Trilha de auditoria (RF22, RNF05): quem fez o quê, quando e de qual IP. Somente inclusão.
+// A consulta (RF23) é exclusiva do ADMIN; não há rota de edição ou exclusão.
 import type { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../db/client";
+import type { Ator } from "../../utils/ator";
+import { intervaloDoDia } from "../../utils/datas";
+import { buildPaginationMeta, toSkipTake } from "../../utils/pagination";
+import type { ListarAuditoriaQuery } from "./auditoria.schema";
 
 export const AcaoAuditoria = {
   CADASTRO_PACIENTE: "CADASTRO_PACIENTE",
@@ -32,6 +37,11 @@ export const AcaoAuditoria = {
   TELECONSULTA_CRIADA: "TELECONSULTA_CRIADA",
   TELECONSULTA_ENTRADA: "TELECONSULTA_ENTRADA",
   TELECONSULTA_ENCERRADA: "TELECONSULTA_ENCERRADA",
+  AUDITORIA_CONSULTADA: "AUDITORIA_CONSULTADA",
+  CONSENTIMENTO_REGISTRADO: "CONSENTIMENTO_REGISTRADO",
+  CONSENTIMENTO_REVOGADO: "CONSENTIMENTO_REVOGADO",
+  DADOS_EXPORTADOS: "DADOS_EXPORTADOS",
+  PACIENTE_ANONIMIZADO: "PACIENTE_ANONIMIZADO",
 } as const;
 
 export type RegistroAuditoria = {
@@ -54,3 +64,39 @@ export const registrarAuditoria = (
   db.logAuditoria.create({
     data: { usuarioId, acao, entidade, entidadeId, ip, detalhes },
   });
+
+// ---------- Consulta pelo ADMIN (RF23) ----------
+
+// Do mais recente para o mais antigo; o id desempata registros do mesmo instante
+// (comuns em transações), para a paginação não repetir nem pular itens. A própria consulta também é auditada,
+// pois a trilha guarda usuário e IP (dados pessoais).
+export async function listarLogs(
+  { usuarioId, acao, de, ate, ...paginacao }: ListarAuditoriaQuery,
+  ator: Ator,
+) {
+  const where: Prisma.LogAuditoriaWhereInput = {
+    usuarioId,
+    acao,
+    criadoEm: {
+      gte: de ? intervaloDoDia(de).inicio : undefined,
+      lt: ate ? intervaloDoDia(ate).fim : undefined,
+    },
+  };
+
+  const [logs, total] = await Promise.all([
+    prisma.logAuditoria.findMany({
+      where,
+      orderBy: [{ criadoEm: "desc" }, { id: "desc" }],
+      ...toSkipTake(paginacao),
+    }),
+    prisma.logAuditoria.count({ where }),
+  ]);
+
+  await registrarAuditoria({
+    ...ator,
+    acao: AcaoAuditoria.AUDITORIA_CONSULTADA,
+    entidade: "log_auditoria",
+  });
+
+  return { data: logs, meta: buildPaginationMeta(paginacao, total) };
+}
