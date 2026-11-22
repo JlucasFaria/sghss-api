@@ -169,7 +169,6 @@ describe("consentimentos (RF24)", () => {
 
 describe("portabilidade (RF25)", () => {
   type Dados = {
-    conta: { email: string };
     cadastro: { cpf: string; telefone: string | null };
     consentimentos: { ip: string }[];
     consultas: { id: string }[];

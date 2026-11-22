@@ -1,6 +1,5 @@
 // Schemas dos direitos do titular (LGPD): consentimentos, portabilidade e anonimização
 import { z } from "@hono/zod-openapi";
-import { Perfil } from "../../../generated/prisma/client";
 import { TERMO_DE_USO } from "../../config/termo-de-uso";
 import { notificacaoSchema } from "../notificacoes/notificacoes.schema";
 import { historicoSchema } from "../pacientes/historico.schema";
@@ -17,17 +16,11 @@ export const consentimentoSchema = z
   })
   .openapi("Consentimento");
 
-export type ConsentimentoResponse = z.infer<typeof consentimentoSchema>;
-
-// Portabilidade (RF25): tudo o que a VidaPlus guarda sobre o titular, em JSON
+// Portabilidade (RF25): tudo o que a VidaPlus guarda sobre o titular, em JSON.
+// O cadastro já traz o e-mail de acesso e a situação da conta.
 export const dadosDoTitularSchema = z
   .object({
     geradoEm: z.date(),
-    conta: z.object({
-      email: z.string(),
-      perfil: z.enum(Perfil),
-      criadoEm: z.date(),
-    }),
     cadastro: pacienteSchema,
     consentimentos: z.array(consentimentoSchema.extend({ ip: z.string() })),
     ...historicoSchema.omit({ paciente: true }).shape,

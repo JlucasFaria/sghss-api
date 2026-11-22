@@ -89,7 +89,7 @@ const exportarDadosRoute = createRoute({
   path: "/me/dados",
   summary: "Exporta todos os dados do paciente autenticado (portabilidade)",
   description:
-    "JSON com conta, cadastro, consentimentos, histórico clínico, prontuário e notificações, enviado como arquivo para download. A exportação é auditada.",
+    "JSON com cadastro, consentimentos, histórico clínico, prontuário e notificações, enviado como arquivo para download. A exportação é auditada.",
   responses: {
     200: {
       description: "Dados do titular",

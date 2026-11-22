@@ -22,12 +22,8 @@ export async function exportarMeusDados(ator: Ator): Promise<DadosDoTitular> {
   const cadastro = await obterMeuPerfil(ator.usuarioId);
   const pacienteId = cadastro.id;
 
-  const [conta, consentimentos, historico, evolucoes, notificacoes] =
+  const [consentimentos, historico, evolucoes, notificacoes] =
     await Promise.all([
-      prisma.usuario.findUniqueOrThrow({
-        where: { id: ator.usuarioId },
-        select: { email: true, perfil: true, criadoEm: true },
-      }),
       prisma.consentimentoLgpd.findMany({
         where: { pacienteId },
         select: { ...selecaoConsentimento, ip: true },
@@ -62,7 +58,6 @@ export async function exportarMeusDados(ator: Ator): Promise<DadosDoTitular> {
   const { paciente: _, ...clinico } = historico;
   return {
     geradoEm: new Date(),
-    conta,
     cadastro,
     consentimentos,
     ...clinico,
