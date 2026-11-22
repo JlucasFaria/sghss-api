@@ -1,5 +1,7 @@
 // Validadores reutilizáveis na borda da API: CPF, telefone e texto livre sem HTML
-import { z } from "zod";
+// Importado de @hono/zod-openapi (e não de "zod") para que os schemas já nasçam com
+// .openapi(): no Zod 4 os métodos são definidos na criação de cada schema
+import { z } from "@hono/zod-openapi";
 
 export const onlyDigits = (value: string) => value.replace(/\D/g, "");
 
