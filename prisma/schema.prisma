@@ -65,6 +65,8 @@ model Unidade {
   atualizadoEm DateTime    @updatedAt @map("atualizado_em")
 
   profissionais Profissional[]
+  consultas     Consulta[]
+  exames        Exame[]
 
   @@map("unidade")
 }
@@ -83,7 +85,9 @@ model Paciente {
   criadoEm        DateTime  @default(now()) @map("criado_em")
   atualizadoEm    DateTime  @updatedAt @map("atualizado_em")
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id])
+  consultas Consulta[]
+  exames    Exame[]
 
   @@map("paciente")
 }
@@ -99,9 +103,117 @@ model Profissional {
   criadoEm      DateTime @default(now()) @map("criado_em")
   atualizadoEm  DateTime @updatedAt @map("atualizado_em")
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
-  unidade Unidade @relation(fields: [unidadeId], references: [id])
+  usuario  Usuario         @relation(fields: [usuarioId], references: [id])
+  unidade  Unidade         @relation(fields: [unidadeId], references: [id])
+  horarios HorarioAgenda[]
+  exames   Exame[]
 
   @@unique([conselho, registro])
   @@map("profissional")
+}
+
+// ---------- Agenda, consultas e exames ----------
+
+enum StatusHorario {
+  DISPONIVEL
+  RESERVADO
+  BLOQUEADO
+
+  @@map("status_horario")
+}
+
+enum ModalidadeConsulta {
+  PRESENCIAL
+  TELEMEDICINA
+
+  @@map("modalidade_consulta")
+}
+
+enum StatusConsulta {
+  AGENDADA
+  REALIZADA
+  CANCELADA
+
+  @@map("status_consulta")
+}
+
+enum StatusExame {
+  AGENDADO
+  REALIZADO
+  CANCELADO
+
+  @@map("status_exame")
+}
+
+// Sobreposição de horários e a regra fim > inicio são validadas no serviço.
+model HorarioAgenda {
+  id             String        @id @default(uuid()) @db.Uuid
+  profissionalId String        @map("profissional_id") @db.Uuid
+  inicio         DateTime
+  fim            DateTime
+  status         StatusHorario @default(DISPONIVEL)
+
+  profissional Profissional @relation(fields: [profissionalId], references: [id])
+  consultas    Consulta[]
+
+  @@unique([profissionalId, inicio])
+  @@map("horario_agenda")
+}
+
+// O profissional da consulta é obtido pelo horário; cancelar devolve o horário
+// para DISPONIVEL, por isso um horário pode ter várias consultas no histórico.
+model Consulta {
+  id                 String             @id @default(uuid()) @db.Uuid
+  pacienteId         String             @map("paciente_id") @db.Uuid
+  horarioId          String             @map("horario_id") @db.Uuid
+  unidadeId          String             @map("unidade_id") @db.Uuid
+  modalidade         ModalidadeConsulta
+  status             StatusConsulta     @default(AGENDADA)
+  motivo             String?            @db.VarChar(500)
+  motivoCancelamento String?            @map("motivo_cancelamento") @db.VarChar(500)
+  criadoEm           DateTime           @default(now()) @map("criado_em")
+  atualizadoEm       DateTime           @updatedAt @map("atualizado_em")
+
+  paciente     Paciente      @relation(fields: [pacienteId], references: [id])
+  horario      HorarioAgenda @relation(fields: [horarioId], references: [id])
+  unidade      Unidade       @relation(fields: [unidadeId], references: [id])
+  teleconsulta Teleconsulta?
+
+  @@map("consulta")
+}
+
+// O token de acesso à sala é gerado na entrada e não é armazenado.
+model Teleconsulta {
+  id          String    @id @default(uuid()) @db.Uuid
+  consultaId  String    @unique @map("consulta_id") @db.Uuid
+  provedor    String    @db.VarChar(50)
+  salaId      String    @map("sala_id") @db.VarChar(255)
+  urlSala     String    @map("url_sala") @db.VarChar(500)
+  iniciadaEm  DateTime? @map("iniciada_em")
+  encerradaEm DateTime? @map("encerrada_em")
+  criadoEm    DateTime  @default(now()) @map("criado_em")
+
+  consulta Consulta @relation(fields: [consultaId], references: [id])
+
+  @@map("teleconsulta")
+}
+
+model Exame {
+  id               String      @id @default(uuid()) @db.Uuid
+  pacienteId       String      @map("paciente_id") @db.Uuid
+  unidadeId        String      @map("unidade_id") @db.Uuid
+  responsavelId    String?     @map("responsavel_id") @db.Uuid
+  tipo             String      @db.VarChar(150)
+  dataHora         DateTime    @map("data_hora")
+  status           StatusExame @default(AGENDADO)
+  resultadoCifrado String?     @map("resultado_cifrado")
+  resultadoEm      DateTime?   @map("resultado_em")
+  criadoEm         DateTime    @default(now()) @map("criado_em")
+  atualizadoEm     DateTime    @updatedAt @map("atualizado_em")
+
+  paciente    Paciente      @relation(fields: [pacienteId], references: [id])
+  unidade     Unidade       @relation(fields: [unidadeId], references: [id])
+  responsavel Profissional? @relation(fields: [responsavelId], references: [id])
+
+  @@map("exame")
 }
