@@ -23,6 +23,7 @@ const errorDescriptions = {
   404: "Recurso não encontrado",
   409: "Conflito com o estado atual do recurso",
   429: "Muitas requisições",
+  502: "Serviço externo indisponível",
 } as const;
 
 type ErrorStatus = keyof typeof errorDescriptions;
