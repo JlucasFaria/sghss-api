@@ -1,4 +1,5 @@
-// Teleconsulta (RF18, RF19): sala no provedor de vídeo e controle de quem entra e quando
+// Teleconsulta (RF18, RF19): sala no provedor de vídeo, entrada na janela de horário
+// e encerramento, que conclui a consulta
 import {
   ModalidadeConsulta,
   StatusConsulta,
@@ -123,4 +124,117 @@ export async function criarSala(consultaId: string, ator: Ator) {
   });
 
   return { criada: true, teleconsulta };
+}
+
+// ---------- Entrada e encerramento (RF19) ----------
+
+const MINUTO = 60 * 1000;
+// A sala abre 15 min antes do início e aceita entradas até 30 min após o fim previsto
+const ABERTURA_ANTECIPADA_MIN = 15;
+const TOLERANCIA_ATRASO_MIN = 30;
+
+// Sala existente e ainda não encerrada
+const exigirSalaAberta = (consulta: ConsultaDaTeleconsulta) => {
+  const sala = consulta.teleconsulta;
+  if (!sala) throw conflict("A sala ainda não foi criada pelo profissional.");
+  if (sala.encerradaEm) throw conflict("A teleconsulta já foi encerrada.");
+  return sala;
+};
+
+// Só o paciente e o profissional da consulta entram, dentro da janela de horário
+export async function entrarNaTeleconsulta(consultaId: string, ator: Ator) {
+  const consulta = await buscarConsulta(consultaId);
+  const participante =
+    consulta.paciente.usuarioId === ator.usuarioId ||
+    consulta.horario.profissional.usuarioId === ator.usuarioId;
+  if (!participante) throw notFound("Consulta não encontrada.");
+
+  exigirTeleconsultaAgendada(consulta);
+  const sala = exigirSalaAberta(consulta);
+
+  const agora = Date.now();
+  const abertura =
+    consulta.horario.inicio.getTime() - ABERTURA_ANTECIPADA_MIN * MINUTO;
+  const expiraEm = new Date(
+    consulta.horario.fim.getTime() + TOLERANCIA_ATRASO_MIN * MINUTO,
+  );
+  if (agora < abertura) {
+    throw conflict(
+      `A sala abre ${ABERTURA_ANTECIPADA_MIN} minutos antes do horário da consulta.`,
+    );
+  }
+  if (agora > expiraEm.getTime()) {
+    throw conflict("O horário desta teleconsulta já terminou.");
+  }
+
+  const token = await chamarProvedor(() =>
+    provedorVideo().gerarToken({
+      salaId: sala.salaId,
+      participanteId: ator.usuarioId,
+      expiraEm,
+    }),
+  );
+
+  await prisma.$transaction(async (tx) => {
+    // A primeira entrada marca o início da teleconsulta
+    await tx.teleconsulta.updateMany({
+      where: { id: sala.id, iniciadaEm: null },
+      data: { iniciadaEm: new Date() },
+    });
+    await registrarAuditoria(
+      {
+        ...ator,
+        acao: AcaoAuditoria.TELECONSULTA_ENTRADA,
+        entidade: "consulta",
+        entidadeId: consultaId,
+      },
+      tx,
+    );
+  });
+
+  return { urlSala: sala.urlSala, token, expiraEm };
+}
+
+// Encerra a sala no provedor e conclui a consulta (REALIZADA). Só o profissional
+// da consulta, depois que a teleconsulta foi iniciada.
+export async function encerrarTeleconsulta(consultaId: string, ator: Ator) {
+  const consulta = await consultaDoProfissional(consultaId, ator);
+  exigirTeleconsultaAgendada(consulta);
+  const sala = exigirSalaAberta(consulta);
+  if (!sala.iniciadaEm) {
+    throw conflict("Ninguém entrou na teleconsulta ainda.");
+  }
+
+  await chamarProvedor(() => provedorVideo().encerrarSala(sala.salaId));
+
+  return prisma.$transaction(async (tx) => {
+    // Condicional: com dois encerramentos simultâneos, só um vale
+    const { count } = await tx.teleconsulta.updateMany({
+      where: { id: sala.id, encerradaEm: null },
+      data: { encerradaEm: new Date() },
+    });
+    if (count === 0) throw conflict("A teleconsulta já foi encerrada.");
+
+    const concluida = await tx.consulta.updateMany({
+      where: { id: consultaId, status: StatusConsulta.AGENDADA },
+      data: { status: StatusConsulta.REALIZADA },
+    });
+    if (concluida.count === 0) {
+      throw conflict("A consulta foi alterada por outra operação.");
+    }
+    await registrarAuditoria(
+      {
+        ...ator,
+        acao: AcaoAuditoria.TELECONSULTA_ENCERRADA,
+        entidade: "consulta",
+        entidadeId: consultaId,
+      },
+      tx,
+    );
+
+    return tx.teleconsulta.findUniqueOrThrow({
+      where: { id: sala.id },
+      select: selecaoTeleconsulta,
+    });
+  });
 }

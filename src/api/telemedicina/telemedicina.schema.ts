@@ -17,3 +17,12 @@ export const teleconsultaSchema = z
   .openapi("Teleconsulta");
 
 export type TeleconsultaResponse = z.infer<typeof teleconsultaSchema>;
+
+// Acesso à sala: o token é temporário e não fica gravado na API
+export const acessoTeleconsultaSchema = z
+  .object({
+    urlSala: z.string(),
+    token: z.string(),
+    expiraEm: z.date(),
+  })
+  .openapi("AcessoTeleconsulta");
