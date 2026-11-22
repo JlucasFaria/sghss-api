@@ -228,6 +228,7 @@ entity "notificacao" as notificacao {
   * id : uuid <<PK>>
   --
   * usuario_id : uuid <<FK>>
+    consulta_id : uuid <<FK>>
   * tipo : tipo_notificacao
   * titulo : varchar
   * mensagem : varchar
@@ -285,6 +286,7 @@ horario ||--o{ consulta
 consulta ||--o| teleconsulta
 consulta ||--o{ registro
 consulta ||--o{ prescricao
+consulta |o--o{ notificacao
 prescricao ||--|{ item
 
 leito ||--o{ internacao
@@ -298,7 +300,7 @@ legend bottom left
   conselho (CRM, COREN) · status_horario (DISPONIVEL, RESERVADO, BLOQUEADO) · modalidade_consulta (PRESENCIAL, TELEMEDICINA)
   status_consulta (AGENDADA, REALIZADA, CANCELADA) · status_exame (AGENDADO, REALIZADO, CANCELADO)
   tipo_leito (ENFERMARIA, APARTAMENTO, UTI) · status_leito (LIVRE, OCUPADO, MANUTENCAO) · tipo_movimentacao (ENTRADA, SAIDA)
-  tipo_lancamento (RECEITA, DESPESA) · tipo_notificacao (CONSULTA_AGENDADA, CONSULTA_CANCELADA, LEMBRETE_CONSULTA)
+  tipo_lancamento (RECEITA, DESPESA) · tipo_notificacao (CONSULTA_AGENDADA, CONSULTA_CANCELADA, CONSULTA_REAGENDADA, LEMBRETE_CONSULTA)
 endlegend
 
 @enduml

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { dataDeHoje, intervaloDoDia, somarDias } from "../datas";
+import {
+  dataDeHoje,
+  formatarDataHora,
+  intervaloDoDia,
+  somarDias,
+} from "../datas";
 
 describe("intervaloDoDia", () => {
   it("delimita o dia no horário de Brasília (UTC−3)", () => {
@@ -22,6 +27,14 @@ describe("somarDias", () => {
   it("soma dias atravessando o fim do mês e do ano", () => {
     expect(somarDias("2026-12-22", 30).toISOString()).toBe(
       "2027-01-21T00:00:00.000Z",
+    );
+  });
+});
+
+describe("formatarDataHora", () => {
+  it("formata no horário de Brasília", () => {
+    expect(formatarDataHora(new Date("2026-12-23T01:05:00Z"))).toBe(
+      "22/12/2026 às 22:05",
     );
   });
 });
