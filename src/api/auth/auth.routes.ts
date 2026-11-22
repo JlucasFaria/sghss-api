@@ -1,6 +1,7 @@
 // Rotas de autenticação: autocadastro do paciente e login
 import { createRoute } from "@hono/zod-openapi";
 import { authenticate } from "../../middlewares/auth";
+import { rateLimit } from "../../middlewares/rate-limit";
 import { getClientIp } from "../../utils/client-ip";
 import { createRouter, jsonContent } from "../../utils/openapi";
 import { dataResponseSchema, errorResponseSchema } from "../../utils/response";
@@ -38,11 +39,24 @@ const registerRoute = createRoute({
   },
 });
 
+// 5 tentativas a cada 15 minutos por IP + e-mail: freia força bruta contra uma conta
+// sem bloquear outros usuários atrás do mesmo IP (ex.: rede de um hospital)
+const loginRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  key: async (c) => {
+    const body = await c.req.json().catch(() => ({}));
+    const email = typeof body?.email === "string" ? body.email : "";
+    return `${getClientIp(c)}:${email.trim().toLowerCase()}`;
+  },
+});
+
 const loginRoute = createRoute({
   method: "post",
   path: "/login",
   tags: ["Autenticação"],
   summary: "Autentica o usuário e emite o token de acesso",
+  middleware: [loginRateLimit] as const,
   request: { body: { required: true, content: jsonContent(loginBodySchema) } },
   responses: {
     200: {
@@ -55,6 +69,10 @@ const loginRoute = createRoute({
     },
     401: {
       description: "E-mail ou senha inválidos",
+      content: jsonContent(errorResponseSchema),
+    },
+    429: {
+      description: "Muitas tentativas de login",
       content: jsonContent(errorResponseSchema),
     },
   },
