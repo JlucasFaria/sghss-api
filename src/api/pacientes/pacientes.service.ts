@@ -1,7 +1,7 @@
 // Regras de negócio de pacientes: gestão pelo ADMIN (RF08) e perfil do titular (RF09)
 import type { Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../db/client";
-import { notFound } from "../../utils/app-error";
+import { conflict, notFound } from "../../utils/app-error";
 import type { Ator } from "../../utils/ator";
 import { decrypt, encrypt, hashCpf } from "../../utils/crypto";
 import {
@@ -26,6 +26,7 @@ const selecao = {
   cpfCifrado: true,
   dataNascimento: true,
   telefoneCifrado: true,
+  anonimizadoEm: true,
   criadoEm: true,
   usuario: { select: { email: true, ativo: true } },
 } satisfies Prisma.PacienteSelect;
@@ -122,14 +123,18 @@ export async function buscarPorCpf(cpf: string, ator: Ator) {
   return paraResposta(paciente);
 }
 
-// CPF corrigido recebe nova cifra e novo hash; CPF de outro paciente vira 409
+// CPF corrigido recebe nova cifra e novo hash; CPF de outro paciente vira 409.
+// Paciente anonimizado (RF26) não volta a ser identificado nem reativado.
 export function atualizarPaciente(
   id: string,
   { cpf, telefone, ativo, ...dados }: AtualizarPacienteInput,
   ator: Ator,
 ) {
   return prisma.$transaction(async (tx) => {
-    await buscarPacienteOuFalhar({ id }, tx);
+    const atual = await buscarPacienteOuFalhar({ id }, tx);
+    if (atual.anonimizadoEm) {
+      throw conflict("Paciente anonimizado não pode ser alterado.");
+    }
 
     const paciente = await tx.paciente.update({
       where: { id },

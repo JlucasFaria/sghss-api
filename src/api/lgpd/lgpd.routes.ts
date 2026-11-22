@@ -15,8 +15,12 @@ import {
   registrarConsentimento,
   revogarConsentimento,
 } from "./consentimentos.service";
-import { consentimentoSchema, dadosDoTitularSchema } from "./lgpd.schema";
-import { exportarMeusDados } from "./titular.service";
+import {
+  anonimizacaoSchema,
+  consentimentoSchema,
+  dadosDoTitularSchema,
+} from "./lgpd.schema";
+import { anonimizarMeusDados, exportarMeusDados } from "./titular.service";
 
 const base = {
   tags: ["LGPD"],
@@ -85,6 +89,22 @@ const exportarDadosRoute = createRoute({
   },
 });
 
+const anonimizarRoute = createRoute({
+  ...base,
+  method: "post",
+  path: "/me/anonimizacao",
+  summary: "Anonimiza os dados pessoais do paciente autenticado",
+  description:
+    "Ação irreversível, confirmada com a senha. Remove nome, CPF, telefone, e-mail e dia/mês de nascimento, revoga os consentimentos e encerra o acesso. Os registros clínicos de guarda obrigatória são preservados. Exige não ter consultas agendadas nem internação em andamento.",
+  request: {
+    body: { required: true, content: jsonContent(anonimizacaoSchema) },
+  },
+  responses: {
+    204: { description: "Dados anonimizados e acesso encerrado" },
+    ...errorResponses(400, 401, 403, 404, 409),
+  },
+});
+
 export const lgpdRoutes = createRouter()
   .openapi(listarConsentimentosRoute, async (c) => {
     const consentimentos = await listarConsentimentos(c.get("usuario").id);
@@ -103,4 +123,8 @@ export const lgpdRoutes = createRouter()
     c.header("Content-Disposition", 'attachment; filename="meus-dados.json"');
     c.header("Cache-Control", "no-store");
     return c.json({ data: dados }, 200);
+  })
+  .openapi(anonimizarRoute, async (c) => {
+    await anonimizarMeusDados(c.req.valid("json"), getAtor(c));
+    return c.body(null, 204);
   });

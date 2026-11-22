@@ -1,4 +1,4 @@
-// Schemas dos direitos do titular (LGPD): consentimentos e portabilidade
+// Schemas dos direitos do titular (LGPD): consentimentos, portabilidade e anonimização
 import { z } from "@hono/zod-openapi";
 import { Perfil } from "../../../generated/prisma/client";
 import { TERMO_DE_USO } from "../../config/termo-de-uso";
@@ -37,3 +37,12 @@ export const dadosDoTitularSchema = z
   .openapi("DadosDoTitular");
 
 export type DadosDoTitular = z.infer<typeof dadosDoTitularSchema>;
+
+// Anonimização (RF26): ação irreversível, confirmada com a senha atual
+export const anonimizacaoSchema = z
+  .object({
+    senha: z.string().min(1).max(128).openapi({ example: "SenhaForte123" }),
+  })
+  .openapi("AnonimizacaoConfirmacao");
+
+export type AnonimizacaoInput = z.infer<typeof anonimizacaoSchema>;
