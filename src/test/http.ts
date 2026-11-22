@@ -2,7 +2,7 @@
 import type { Perfil } from "../../generated/prisma/client";
 import { app } from "../app";
 import { signToken } from "../utils/token";
-import { criarUsuario } from "./factories";
+import { criarPaciente, criarUsuario } from "./factories";
 
 // Token válido para um usuário existente
 export const tokenDe = (usuario: { id: string; perfil: Perfil }) =>
@@ -12,6 +12,17 @@ export const tokenDe = (usuario: { id: string; perfil: Perfil }) =>
 export async function autenticar(perfil: Perfil) {
   return tokenDe(await criarUsuario({ perfil }));
 }
+
+// Cria um paciente com usuário de acesso e devolve o token e o registro do paciente
+export async function autenticarPaciente() {
+  const usuario = await criarUsuario();
+  const paciente = await criarPaciente({ usuarioId: usuario.id });
+  return { token: await tokenDe(usuario), paciente };
+}
+
+// Token de um profissional criado pela factory (perfil MEDICO)
+export const tokenDoProfissional = (profissional: { usuarioId: string }) =>
+  tokenDe({ id: profissional.usuarioId, perfil: "MEDICO" });
 
 export function requisitar(
   method: string,
