@@ -106,7 +106,7 @@ export const authRoutes = createRouter()
     return c.json({ data: usuario }, 201);
   })
   .openapi(loginRoute, async (c) => {
-    const token = await login(c.req.valid("json"));
+    const token = await login(c.req.valid("json"), getClientIp(c));
     return c.json({ data: token }, 200);
   })
   .openapi(meRoute, async (c) => {
