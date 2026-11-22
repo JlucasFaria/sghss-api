@@ -71,24 +71,25 @@ export function registrarConsentimento(ator: Ator) {
   });
 }
 
-// Consentimento de outro paciente responde 404, sem revelar que existe
+// Revoga só se ainda estiver ativo, em uma única escrita: com duas requisições
+// simultâneas, apenas uma revoga e é auditada. Consentimento de outro paciente
+// responde 404, sem revelar que existe.
 export function revogarConsentimento(id: string, ator: Ator) {
   return prisma.$transaction(async (tx) => {
     const pacienteId = await buscarIdDoPaciente(ator.usuarioId, tx);
 
-    const consentimento = await tx.consentimentoLgpd.findFirst({
-      where: { id, pacienteId },
-      select: { revogadoEm: true },
-    });
-    if (!consentimento) throw notFound("Consentimento não encontrado.");
-    if (consentimento.revogadoEm) {
-      throw conflict("Este consentimento já foi revogado.");
-    }
-
-    await tx.consentimentoLgpd.update({
-      where: { id },
+    const { count } = await tx.consentimentoLgpd.updateMany({
+      where: { id, pacienteId, revogadoEm: null },
       data: { revogadoEm: new Date() },
     });
+    if (count === 0) {
+      const existe = await tx.consentimentoLgpd.findFirst({
+        where: { id, pacienteId },
+        select: { id: true },
+      });
+      if (!existe) throw notFound("Consentimento não encontrado.");
+      throw conflict("Este consentimento já foi revogado.");
+    }
 
     await registrarAuditoria(
       {

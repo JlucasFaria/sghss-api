@@ -67,7 +67,8 @@ export const registrarAuditoria = (
 
 // ---------- Consulta pelo ADMIN (RF23) ----------
 
-// Do mais recente para o mais antigo. A própria consulta também é auditada,
+// Do mais recente para o mais antigo; o id desempata registros do mesmo instante
+// (comuns em transações), para a paginação não repetir nem pular itens. A própria consulta também é auditada,
 // pois a trilha guarda usuário e IP (dados pessoais).
 export async function listarLogs(
   { usuarioId, acao, de, ate, ...paginacao }: ListarAuditoriaQuery,
@@ -85,7 +86,7 @@ export async function listarLogs(
   const [logs, total] = await Promise.all([
     prisma.logAuditoria.findMany({
       where,
-      orderBy: { criadoEm: "desc" },
+      orderBy: [{ criadoEm: "desc" }, { id: "desc" }],
       ...toSkipTake(paginacao),
     }),
     prisma.logAuditoria.count({ where }),

@@ -15,6 +15,7 @@ import { autenticar, lerJson, requisitar, tokenDe } from "../../../test/http";
 import { encrypt } from "../../../utils/crypto";
 import { hashPassword } from "../../../utils/password";
 import { AcaoAuditoria } from "../../auditoria/auditoria.service";
+import { anonimizacaoRateLimit } from "../lgpd.routes";
 
 type Consentimento = {
   id: string;
@@ -61,6 +62,7 @@ const criarNotificacao = (usuarioId: string) =>
   });
 
 beforeEach(async () => {
+  anonimizacaoRateLimit.reset();
   await resetDatabase();
   titular = await criarTitular();
 });
@@ -249,7 +251,8 @@ describe("anonimização (RF26)", () => {
 
   it("exige a senha correta e não altera nada sem ela", async () => {
     expect((await anonimizar({})).status).toBe(400);
-    expect((await anonimizar({ senha: "SenhaErrada1" })).status).toBe(401);
+    // 403: o token continua válido, só a confirmação falhou
+    expect((await anonimizar({ senha: "SenhaErrada1" })).status).toBe(403);
 
     const paciente = await pacienteNoBanco();
     expect(paciente).toMatchObject({
@@ -257,6 +260,17 @@ describe("anonimização (RF26)", () => {
       anonimizadoEm: null,
     });
     expect(paciente.usuario.ativo).toBe(true);
+  });
+
+  it("limita as tentativas de senha por usuário", async () => {
+    for (let i = 0; i < 5; i++) {
+      expect((await anonimizar({ senha: "SenhaErrada1" })).status).toBe(403);
+    }
+
+    const bloqueada = await anonimizar();
+    expect(bloqueada.status).toBe(429);
+    expect(bloqueada.headers.get("Retry-After")).not.toBeNull();
+    expect((await pacienteNoBanco()).anonimizadoEm).toBeNull();
   });
 
   it("recusa com consulta agendada ou internação em andamento", async () => {

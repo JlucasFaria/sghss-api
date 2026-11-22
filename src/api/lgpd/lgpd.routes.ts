@@ -2,6 +2,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { Perfil } from "../../../generated/prisma/client";
 import { authenticate, requireRole } from "../../middlewares/auth";
+import { rateLimit } from "../../middlewares/rate-limit";
 import { getAtor } from "../../utils/ator";
 import {
   createRouter,
@@ -22,11 +23,20 @@ import {
 } from "./lgpd.schema";
 import { anonimizarMeusDados, exportarMeusDados } from "./titular.service";
 
+const somentePaciente = [authenticate, requireRole(Perfil.PACIENTE)];
 const base = {
   tags: ["LGPD"],
   security: [{ bearerAuth: [] }],
-  middleware: [authenticate, requireRole(Perfil.PACIENTE)],
+  middleware: somentePaciente,
 };
+
+// 5 tentativas a cada 15 minutos por usuário: com um token roubado, a confirmação
+// por senha não pode virar um meio de descobrir a senha por tentativa
+export const anonimizacaoRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  key: (c) => c.get("usuario").id,
+});
 
 const listarConsentimentosRoute = createRoute({
   ...base,
@@ -94,14 +104,15 @@ const anonimizarRoute = createRoute({
   method: "post",
   path: "/me/anonimizacao",
   summary: "Anonimiza os dados pessoais do paciente autenticado",
+  middleware: [...somentePaciente, anonimizacaoRateLimit],
   description:
-    "Ação irreversível, confirmada com a senha. Remove nome, CPF, telefone, e-mail e dia/mês de nascimento, revoga os consentimentos e encerra o acesso. Os registros clínicos de guarda obrigatória são preservados. Exige não ter consultas agendadas nem internação em andamento.",
+    "Ação irreversível, confirmada com a senha (até 5 tentativas a cada 15 minutos). Remove nome, CPF, telefone, e-mail e dia/mês de nascimento, revoga os consentimentos e encerra o acesso. Os registros clínicos de guarda obrigatória são preservados. Exige não ter consultas agendadas nem internação em andamento.",
   request: {
     body: { required: true, content: jsonContent(anonimizacaoSchema) },
   },
   responses: {
     204: { description: "Dados anonimizados e acesso encerrado" },
-    ...errorResponses(400, 401, 403, 404, 409),
+    ...errorResponses(400, 401, 403, 404, 409, 429),
   },
 });
 

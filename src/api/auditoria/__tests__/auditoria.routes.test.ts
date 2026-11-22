@@ -100,6 +100,27 @@ describe("filtros", () => {
     expect(primeira.data[0]?.id).toBe(recente.id);
   });
 
+  it("desempata registros do mesmo instante, sem repetir itens entre páginas", async () => {
+    const instante = new Date("2026-01-01T12:00:00Z");
+    const criados = [];
+    for (let i = 0; i < 4; i++) {
+      criados.push(await criarLog({ acao: "LOGIN", criadoEm: instante }));
+    }
+
+    const paginas = [];
+    for (const page of [1, 2]) {
+      const { data } = await listar(`?acao=LOGIN&limit=2&page=${page}`);
+      paginas.push(...data.map((l) => l.id));
+    }
+
+    expect(paginas).toEqual(
+      criados
+        .map((l) => l.id)
+        .sort()
+        .reverse(),
+    );
+  });
+
   it("filtra por usuário e por ação", async () => {
     const outro = await criarUsuario();
     const agora = new Date();

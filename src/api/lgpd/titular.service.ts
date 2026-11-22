@@ -2,7 +2,7 @@
 // e anonimização (RF26)
 import { StatusConsulta, type Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../db/client";
-import { conflict, notFound, unauthorized } from "../../utils/app-error";
+import { conflict, forbidden, notFound } from "../../utils/app-error";
 import type { Ator } from "../../utils/ator";
 import { decrypt, encrypt, hashCpf } from "../../utils/crypto";
 import { hashPassword, verifyPassword } from "../../utils/password";
@@ -92,8 +92,9 @@ export async function anonimizarMeusDados(
     where: { id: ator.usuarioId },
     select: { senhaHash: true },
   });
+  // 403, não 401: o token é válido, e clientes tratam 401 como sessão expirada
   if (!(await verifyPassword(senha, usuario.senhaHash))) {
-    throw unauthorized("Senha incorreta.");
+    throw forbidden("Senha incorreta.");
   }
   // Senha aleatória descartada: a conta não pode mais ser acessada
   const senhaHash = await hashPassword(crypto.randomUUID());
