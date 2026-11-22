@@ -71,3 +71,11 @@ export const emailSchema = z
   .toLowerCase()
   .max(254, "Deve ter no máximo 254 caracteres.")
   .pipe(z.email("E-mail inválido."));
+
+// Senha com letra e número; o máximo evita custo excessivo de hash com senhas gigantes (DoS)
+export const senhaSchema = z
+  .string()
+  .min(8, "A senha deve ter ao menos 8 caracteres.")
+  .max(128, "A senha deve ter no máximo 128 caracteres.")
+  .regex(/[A-Za-z]/, "A senha deve conter ao menos uma letra.")
+  .regex(/\d/, "A senha deve conter ao menos um número.");

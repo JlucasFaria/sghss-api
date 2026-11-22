@@ -38,7 +38,7 @@ const listarRoute = createRoute({
   path: "/",
   summary: "Lista as unidades (paginado)",
   description: "Unidades inativas só são listadas para o ADMIN.",
-  middleware: [authenticate] as const,
+  middleware: [authenticate],
   request: { query: listarUnidadesQuerySchema },
   responses: {
     200: {
@@ -54,7 +54,7 @@ const buscarRoute = createRoute({
   method: "get",
   path: "/{id}",
   summary: "Consulta uma unidade",
-  middleware: [authenticate] as const,
+  middleware: [authenticate],
   request: { params: idParamSchema },
   responses: { 200: unidadeResponse, ...errorResponses(400, 401, 404) },
 });
