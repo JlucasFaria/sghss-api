@@ -3,6 +3,7 @@
 import { prisma } from "../../db/client";
 import { notFound } from "../../utils/app-error";
 import { hashSha256 } from "../../utils/crypto";
+import { dataDeHoje } from "../../utils/datas";
 import {
   AcaoAuditoria,
   registrarAuditoria,
@@ -36,7 +37,7 @@ export async function validarReceita(
   if (!receita) throw notFound("Receita não encontrada.");
 
   const { conselho, nome, registro } = receita.consulta.horario.profissional;
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = dataDeHoje();
   const validaAte = receita.validaAte.toISOString().slice(0, 10);
 
   return {

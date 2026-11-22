@@ -5,6 +5,7 @@ import { prisma } from "../../db/client";
 import { AppError, notFound } from "../../utils/app-error";
 import type { Ator } from "../../utils/ator";
 import { gerarCodigoVerificacao, hashSha256 } from "../../utils/crypto";
+import { dataDeHoje, somarDias } from "../../utils/datas";
 import {
   AcaoAuditoria,
   registrarAuditoria,
@@ -73,11 +74,8 @@ async function buscarReceitaCompleta(id: string) {
   );
 }
 
-const validadePadrao = () => {
-  const data = new Date();
-  data.setUTCDate(data.getUTCDate() + VALIDADE_PADRAO_DIAS);
-  return data;
-};
+// Validade padrão contada a partir de hoje no horário de Brasília
+const validadePadrao = () => somarDias(dataDeHoje(), VALIDADE_PADRAO_DIAS);
 
 // Só o médico da consulta, em consulta já iniciada e não cancelada
 export async function emitirReceita(

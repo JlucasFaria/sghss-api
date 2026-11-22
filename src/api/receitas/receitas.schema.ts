@@ -1,6 +1,7 @@
 // Schemas de entrada e saída das receitas digitais
 import { z } from "@hono/zod-openapi";
 import { Conselho } from "../../../generated/prisma/client";
+import { dataDeHoje } from "../../utils/datas";
 import { mensagem, safeText } from "../../utils/validators";
 
 const DIA = 24 * 60 * 60 * 1000;
@@ -29,7 +30,7 @@ export const emitirReceitaSchema = z
       .transform((value) => new Date(value))
       .refine((data) => {
         // Compara datas inteiras: "hoje" é aceito como validade
-        const hoje = new Date(new Date().toISOString().slice(0, 10));
+        const hoje = new Date(dataDeHoje());
         const dias = (data.getTime() - hoje.getTime()) / DIA;
         return dias >= 0 && dias <= VALIDADE_MAXIMA_DIAS;
       }, `A validade deve estar entre hoje e ${VALIDADE_MAXIMA_DIAS} dias.`)

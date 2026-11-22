@@ -17,6 +17,7 @@ import {
   tokenDoProfissional,
 } from "../../../test/http";
 import { hashSha256 } from "../../../utils/crypto";
+import { dataDeHoje, somarDias } from "../../../utils/datas";
 import { validacaoRateLimit } from "../receitas.routes";
 import { abreviarNome } from "../validacao.service";
 
@@ -92,8 +93,7 @@ describe("POST /consultas/:id/receitas", () => {
     const salva = await prisma.prescricao.findUniqueOrThrow({
       where: { id: data.id },
     });
-    const esperado = new Date();
-    esperado.setUTCDate(esperado.getUTCDate() + 30);
+    const esperado = somarDias(dataDeHoje(), 30);
 
     expect(res.status).toBe(201);
     expect(data.codigoVerificacao).toMatch(/^[A-Za-z0-9_-]{43}$/);
