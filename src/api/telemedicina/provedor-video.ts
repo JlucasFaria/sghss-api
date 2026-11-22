@@ -33,20 +33,24 @@ export class ProvedorVideoSimulado implements ProvedorVideo {
     }
   }
 
-  async criarSala(): Promise<SalaCriada> {
+  async criarSala(
+    _dados: Parameters<ProvedorVideo["criarSala"]>[0],
+  ): Promise<SalaCriada> {
     this.verificarDisponibilidade();
     const salaId = crypto.randomUUID();
     return { salaId, urlSala: `https://video.vidaplus.example/${salaId}` };
   }
 
-  async gerarToken(): Promise<string> {
+  async gerarToken(
+    _dados: Parameters<ProvedorVideo["gerarToken"]>[0],
+  ): Promise<string> {
     this.verificarDisponibilidade();
     return Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString(
       "base64url",
     );
   }
 
-  async encerrarSala(): Promise<void> {
+  async encerrarSala(_salaId: string): Promise<void> {
     this.verificarDisponibilidade();
   }
 }
