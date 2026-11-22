@@ -1,24 +1,10 @@
 // Schemas de entrada e saída da agenda do profissional
 import { z } from "@hono/zod-openapi";
 import { StatusHorario } from "../../../generated/prisma/client";
-import { mensagem } from "../../utils/validators";
+import { dataHoraSchema, mensagem, seSemErros } from "../../utils/validators";
 
 // Limite de sanidade para um único horário (ex.: evita "fim" digitado no dia errado)
 const DURACAO_MAXIMA_HORAS = 12;
-
-// Data e hora ISO 8601 com fuso, ex.: 2026-12-01T09:00:00-03:00
-const dataHoraSchema = z.iso
-  .datetime({
-    offset: true,
-    ...mensagem("Data e hora inválidas. Use ISO 8601 com fuso."),
-  })
-  .transform((value) => new Date(value));
-
-// Regras entre campos só rodam com as datas válidas: no Zod 4 o refine do objeto
-// executa mesmo quando um campo falhou, e aí "inicio" ainda seria string
-const seDatasValidas = {
-  when: (payload: { issues: unknown[] }) => payload.issues.length === 0,
-};
 
 export const abrirHorarioSchema = z
   .object({
@@ -36,7 +22,7 @@ export const abrirHorarioSchema = z
   .refine(({ inicio, fim }) => fim > inicio, {
     path: ["fim"],
     message: "O fim deve ser posterior ao início.",
-    ...seDatasValidas,
+    ...seSemErros,
   })
   .refine(
     ({ inicio, fim }) =>
@@ -44,13 +30,13 @@ export const abrirHorarioSchema = z
     {
       path: ["fim"],
       message: `O horário pode durar no máximo ${DURACAO_MAXIMA_HORAS} horas.`,
-      ...seDatasValidas,
+      ...seSemErros,
     },
   )
   .refine(({ inicio }) => inicio > new Date(), {
     path: ["inicio"],
     message: "O horário deve começar no futuro.",
-    ...seDatasValidas,
+    ...seSemErros,
   })
   .openapi("HorarioEntrada");
 

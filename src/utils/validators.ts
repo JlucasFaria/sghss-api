@@ -98,3 +98,18 @@ export const dataNascimentoSchema = z.iso
     "Data de nascimento inválida.",
   )
   .openapi({ type: "string", format: "date", example: "1990-05-20" });
+
+// Data e hora ISO 8601 com fuso (ex.: 2026-12-01T09:00:00-03:00), convertida para Date
+export const dataHoraSchema = z.iso
+  .datetime({
+    offset: true,
+    ...mensagem("Data e hora inválidas. Use ISO 8601 com fuso."),
+  })
+  .transform((value) => new Date(value));
+
+// Regras entre campos (refine do objeto) só rodam se os campos já são válidos: no Zod 4
+// o refine do objeto executa mesmo quando um campo falhou, com o valor ainda cru.
+// Uso: .refine(fn, { path, message, ...seSemErros })
+export const seSemErros = {
+  when: (payload: { issues: unknown[] }) => payload.issues.length === 0,
+};

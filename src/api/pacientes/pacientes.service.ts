@@ -70,6 +70,19 @@ async function buscarPacienteOuFalhar(
   return paciente;
 }
 
+// Id do paciente vinculado ao usuário logado (para as rotas em que o paciente age por si)
+export async function buscarIdDoPaciente(
+  usuarioId: string,
+  db: Prisma.TransactionClient = prisma,
+) {
+  const paciente = await db.paciente.findUnique({
+    where: { usuarioId },
+    select: { id: true },
+  });
+  if (!paciente) throw notFound("Paciente não encontrado.");
+  return paciente.id;
+}
+
 // Leitura de dados pessoais completos também entra na trilha de auditoria (RF22)
 const auditarConsulta = (id: string, ator: Ator, via: "id" | "cpf") =>
   registrarAuditoria({

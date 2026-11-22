@@ -9,6 +9,7 @@ import {
   AcaoAuditoria,
   registrarAuditoria,
 } from "../auditoria/auditoria.service";
+import { exigirSemConsultasFuturas } from "../consultas/consultas.service";
 import type {
   AtualizarProfissionalInput,
   CriarProfissionalInput,
@@ -134,6 +135,9 @@ export function atualizarProfissional(
 ) {
   return prisma.$transaction(async (tx) => {
     const atual = await buscarProfissional(id, true, tx);
+    if (ativo === false) {
+      await exigirSemConsultasFuturas({ profissionalId: id }, tx);
+    }
     if (unidadeId !== atual.unidade.id) {
       await exigirUnidadeAtiva(unidadeId, tx);
     }
@@ -169,6 +173,7 @@ export function atualizarProfissional(
 export function inativarProfissional(id: string, ator: Ator) {
   return prisma.$transaction(async (tx) => {
     await buscarProfissional(id, true, tx);
+    await exigirSemConsultasFuturas({ profissionalId: id }, tx);
 
     await tx.profissional.update({
       where: { id },
