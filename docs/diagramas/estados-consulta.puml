@@ -1,0 +1,55 @@
+@startuml estados-consulta
+title SGHSS VidaPlus — Estados da consulta (RF11, RF12, RF15, RF19)
+
+hide empty description
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam state {
+  BackgroundColor #F5F9FF
+  BorderColor #3B6EA5
+  ArrowColor #444444
+}
+skinparam legend {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+}
+
+state AGENDADA
+state REALIZADA
+state CANCELADA
+
+[*] --> AGENDADA : agendar (paciente)\n[horário DISPONIVEL e futuro,\nsem conflito na agenda do paciente]\n/ horário → RESERVADO
+
+AGENDADA --> AGENDADA : reagendar\n[novo horário do mesmo profissional,\nDISPONIVEL e futuro]\n/ horário antigo → DISPONIVEL,\nnovo → RESERVADO
+
+AGENDADA --> CANCELADA : cancelar\n/ horário → DISPONIVEL
+
+AGENDADA --> REALIZADA : concluir atendimento (profissional da consulta)\n[consulta iniciada e com ao menos uma evolução]
+
+AGENDADA --> REALIZADA : encerrar teleconsulta (profissional)\n[alguém já entrou na sala]
+
+REALIZADA --> [*]
+CANCELADA --> [*]
+
+
+note bottom of REALIZADA
+  Estado final. O prontuário continua
+  aceitando adendos (somente inclusão).
+end note
+
+note bottom of CANCELADA
+  Estado final. O motivo do cancelamento
+  fica registrado; o horário volta à agenda.
+end note
+
+legend bottom left
+  <b>Quem cancela ou reagenda</b>: o paciente, até 24 h antes do início; o profissional da consulta e o ADMIN, a qualquer momento.
+  Agendar, reagendar e cancelar notificam o paciente; todas as transições são auditadas.
+endlegend
+
+@enduml

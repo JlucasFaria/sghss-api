@@ -17,3 +17,9 @@ O agendamento é o fluxo mais disputado do sistema: vários pacientes podem tent
 ![Sequência da teleconsulta](diagramas/sequencia-teleconsulta.png)
 
 O provedor de vídeo é acessado por uma porta (`ProvedorVideo`) com um adaptador simulado, que pode ser trocado por um provedor real sem alterar as regras. O profissional cria a sala; paciente e profissional entram dentro da janela de horário (15 minutos antes do início até 30 minutos após o fim) e recebem um token temporário, que não é gravado na API. Se o provedor estiver fora do ar, a API responde 502 sem gravar nada. O encerramento fecha a sala e conclui a consulta, com atualizações condicionais que impedem dois encerramentos e não sobrescrevem um cancelamento simultâneo.
+
+## Diagrama de estados da consulta
+
+![Estados da consulta](diagramas/estados-consulta.png)
+
+A consulta tem apenas três estados. Ela nasce `AGENDADA` e termina em `REALIZADA` (quando o profissional conclui o atendimento ou encerra a teleconsulta) ou `CANCELADA`. O reagendamento não cria um estado próprio: a consulta continua `AGENDADA`, em outro horário do mesmo profissional, e o horário antigo volta à agenda. As transições são atualizações condicionais no banco: cancelar, reagendar e concluir só valem com `status = AGENDADA`, e o encerramento da teleconsulta não sobrescreve um cancelamento (`status <> CANCELADA`). Assim, operações simultâneas sobre a mesma consulta não produzem estados inconsistentes.
