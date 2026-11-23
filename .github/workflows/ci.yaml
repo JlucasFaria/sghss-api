@@ -69,5 +69,14 @@ jobs:
       - name: Aplicar migrations
         run: bun run db:deploy
 
-      - name: Testes
-        run: bun test
+      # Falha se a cobertura de linhas ou funções ficar abaixo de 80% (bunfig.toml)
+      - name: Testes com cobertura
+        run: bun run test:coverage
+
+      - name: Publicar relatório de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura
+          path: coverage/lcov.info
+          if-no-files-found: ignore

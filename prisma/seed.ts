@@ -101,7 +101,9 @@ async function main() {
   for (const unidade of unidades) {
     await prisma.unidade.upsert({
       where: { id: unidade.id },
-      update: {},
+      // Restaura a unidade fictícia caso tenha sido alterada ou inativada
+      // (ex.: pela varredura do ZAP, que chama as rotas com os exemplos do contrato)
+      update: { ...unidade, ativo: true },
       create: unidade,
     });
   }

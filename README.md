@@ -63,7 +63,20 @@ bun run db:test:prepare
 
 # 3. Executar os testes
 bun test
+
+# Com relatório de cobertura (falha se algum arquivo ficar abaixo de 80% de linhas ou funções)
+bun run test:coverage
 ```
+
+O relatório em formato LCOV fica em `coverage/lcov.info`; no CI, ele é publicado como artefato de cada execução.
+
+## Testes não funcionais
+
+O [plano de testes](docs/plano-de-testes.md) descreve a estratégia, os casos de teste, os critérios de aceitação e os resultados. Carga (k6) e segurança (OWASP ZAP) rodam via Docker contra a API local; veja [`tests/README.md`](tests/README.md).
+
+## Coleção Postman
+
+A pasta [`docs/postman`](docs/postman/README.md) tem a coleção com o fluxo autenticado e casos negativos, e o environment para rodar localmente.
 
 ## Scripts
 
@@ -72,6 +85,9 @@ bun test
 | `bun run dev`             | Inicia a API com recarga automática           |
 | `bun run start`           | Inicia a API                                  |
 | `bun test`                | Executa os testes                             |
+| `bun run test:coverage`   | Executa os testes com relatório de cobertura  |
+| `bun run test:carga`      | Teste de carga com k6 (Docker; API rodando)   |
+| `bun run test:seguranca`  | Varredura OWASP ZAP (Docker; API rodando)     |
 | `bun run lint`            | Verifica o código com ESLint                  |
 | `bun run lint:fix`        | Corrige automaticamente problemas do ESLint   |
 | `bun run format`          | Formata o código com Prettier                 |
