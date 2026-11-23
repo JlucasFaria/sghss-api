@@ -1,0 +1,93 @@
+@startuml componentes
+title SGHSS VidaPlus — Diagrama de componentes da API
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam componentStyle rectangle
+skinparam component {
+  BackgroundColor #F5F9FF
+  BorderColor #3B6EA5
+  ArrowColor #444444
+}
+skinparam package {
+  BorderColor #3B6EA5
+}
+skinparam interface {
+  BackgroundColor #F5F9FF
+  BorderColor #3B6EA5
+}
+skinparam database {
+  BackgroundColor #F5F9FF
+  BorderColor #3B6EA5
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+}
+
+actor "Cliente\n(app, web, farmácia)" as Cliente
+
+package "API SGHSS (Bun + Hono)" {
+  component "Middlewares globais" as Globais
+  note right of Globais
+    requestId · log JSON por requisição
+    cabeçalhos de segurança · CORS
+    limite de tamanho do corpo
+  end note
+
+  package "Camada de rotas (src/api/*/*.routes.ts)" {
+    component "Rotas + contrato OpenAPI" as Rotas
+    component "Validação Zod\n(params, query, corpo)" as Zod
+    component "authenticate · requireRole\n(JWT + RBAC) · rateLimit" as Seguranca
+  }
+
+  package "Camada de serviços (src/api/*/*.service.ts)" {
+    component "Serviços de domínio" as Servicos
+    note right of Servicos
+      auth · unidades · profissionais e agenda
+      pacientes e histórico · consultas · exames
+      prontuário · receitas · telemedicina
+      notificações · LGPD · leitos · internações
+      suprimentos · financeiro · relatórios · health
+    end note
+    component "Auditoria\n(trilha somente inclusão)" as Auditoria
+    component "Notificações\n(eventos de consulta)" as Notificacoes
+    component "Rotina de lembretes\n(a cada 15 min, trava no banco)" as Lembretes
+    interface "ProvedorVideo\n<<porta>>" as Porta
+    component "Adaptador simulado\n<<adaptador>>" as Adaptador
+  }
+
+  package "Infraestrutura" {
+    component "Prisma Client\n(adapter pg)" as Prisma
+    component "Utilitários\n(cripto AES-GCM, argon2id,\nJWT, paginação, logger)" as Utils
+    component "Error handler\n({ error } padronizado)" as Erros
+  }
+
+  component "OpenAPI /openapi.json\nSwagger UI /docs" as Docs
+}
+
+database "PostgreSQL" as Banco
+cloud "Provedor de vídeo\n(Jitsi, Twilio...)" as VideoReal
+
+Cliente --> Globais : HTTPS (via proxy)
+Globais --> Rotas
+Rotas --> Seguranca
+Rotas --> Zod
+Rotas --> Servicos : dados validados + ator
+Rotas ..> Docs : gera o contrato
+Servicos --> Auditoria
+Servicos --> Notificacoes
+Servicos --> Porta
+Adaptador ..|> Porta
+VideoReal ..> Porta : adaptador real (futuro)
+Lembretes --> Notificacoes
+Servicos --> Utils
+Servicos --> Prisma
+Auditoria --> Prisma
+Notificacoes --> Prisma
+Seguranca --> Prisma : usuário ativo e perfil
+Prisma --> Banco : SQL (pool de conexões)
+Rotas ..> Erros : exceções
+
+@enduml
