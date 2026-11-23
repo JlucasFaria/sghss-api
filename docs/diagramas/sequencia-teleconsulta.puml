@@ -26,7 +26,7 @@ participant "TelemedicinaService" as Servico
 participant "ProvedorVideo\n<<porta>>" as Provedor
 database "PostgreSQL" as Banco
 
-== 1. Criação da sala (POST /consultas/:id/teleconsulta) ==
+== 1. Criação da sala (POST /consultas/{id}/teleconsulta) ==
 Medico -> Servico : criarSala(consultaId)
 Servico -> Banco : consulta do profissional, de telemedicina e AGENDADA?
 alt sala já existe
@@ -46,7 +46,7 @@ group transação
 end
 Servico --> Medico : 201 { urlSala }
 
-== 2. Entrada (POST /consultas/:id/teleconsulta/entrada) ==
+== 2. Entrada (POST /consultas/{id}/teleconsulta/entrada) ==
 Paciente -> Servico : entrarNaTeleconsulta(consultaId)
 Servico -> Banco : é o paciente ou o profissional da consulta?
 alt não participa
@@ -68,13 +68,17 @@ note right of Paciente
   expira no fim da janela
 end note
 
-== 3. Encerramento (POST /consultas/:id/teleconsulta/encerramento) ==
+== 3. Encerramento (POST /consultas/{id}/teleconsulta/encerramento) ==
 Medico -> Servico : encerrarTeleconsulta(consultaId)
 Servico -> Banco : sala aberta e já iniciada?
 alt ninguém entrou, sala encerrada ou consulta cancelada
   Servico --> Medico : 409
 end
 Servico -> Provedor : encerrarSala(salaId)
+alt provedor fora do ar
+  Provedor --> Servico : erro
+  Servico --> Medico : 502 (nada é alterado)
+end
 group transação
   Servico -> Banco : UPDATE teleconsulta SET encerrada_em\nWHERE encerrada_em IS NULL
   Servico -> Banco : UPDATE consulta SET status = REALIZADA\nWHERE status <> CANCELADA

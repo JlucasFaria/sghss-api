@@ -40,6 +40,8 @@ CANCELADA --> [*]
 note bottom of REALIZADA
   Estado final. O prontuário continua
   aceitando adendos (somente inclusão).
+  Encerrar a teleconsulta de uma consulta
+  já concluída só fecha a sala.
 end note
 
 note bottom of CANCELADA

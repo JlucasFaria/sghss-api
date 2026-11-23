@@ -49,7 +49,7 @@ A API é organizada em camadas, com uma pasta por domínio em `src/api/`: as **r
 
 ## Decisões técnicas
 
-- **Concorrência tratada no banco.** Agendamento, internação, estoque e transições da consulta usam atualizações condicionais e travas de linha dentro de transações: com requisições simultâneas, só uma vence e as demais recebem 409. Há testes de concorrência para esses casos.
+- **Concorrência tratada no banco.** Agendamento, internação, estoque e transições da consulta usam atualizações condicionais e travas de linha dentro de transações: com requisições simultâneas, só uma vence e as demais recebem 409. Testes de concorrência cobrem o agendamento, a internação (inclusive alta e transferência ao mesmo tempo) e as saídas de estoque.
 - **Registros clínicos e auditoria somente de inclusão.** Prontuário, auditoria e lançamentos financeiros não têm rota de edição ou exclusão; correções geram um novo registro. `DELETE` de cadastros com histórico clínico faz inativação lógica.
 - **Ação e efeitos na mesma transação.** A auditoria e a notificação de uma operação são gravadas junto com ela: se algo falha, nada fica pela metade.
 - **Integração por porta e adaptador.** O provedor de vídeo é uma interface; o adaptador simulado pode ser trocado por um real sem mexer nas regras, e a falha do provedor vira 502 sem gravar estado parcial.
