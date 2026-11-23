@@ -47,6 +47,9 @@ RUN apk add --no-cache tini
 USER bun
 EXPOSE 3000
 
+# Liveness (/health): o container é saudável se o processo responde. A readiness
+# (/health/ready, que inclui o banco) fica para o monitor de disponibilidade: se o banco
+# cair, reiniciar a API não resolveria nada
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD wget -qO- "http://127.0.0.1:${PORT}/health" > /dev/null || exit 1
 

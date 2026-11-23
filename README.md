@@ -48,7 +48,7 @@ bun run db:seed
 bun run dev
 ```
 
-A API sobe em `http://localhost:3000`. Para verificar: `GET /health`.
+A API sobe em `http://localhost:3000`. Para verificar: `GET /health` (processo no ar) e `GET /health/ready` (inclui o banco).
 
 ### Com Docker (API e banco)
 
