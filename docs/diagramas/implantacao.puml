@@ -1,0 +1,81 @@
+@startuml implantacao
+title SGHSS VidaPlus — Diagrama de implantação
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam node {
+  BackgroundColor #F5F9FF
+  BorderColor #3B6EA5
+}
+skinparam artifact {
+  BackgroundColor #FFFFFF
+  BorderColor #3B6EA5
+}
+skinparam database {
+  BackgroundColor #F5F9FF
+  BorderColor #3B6EA5
+}
+skinparam ArrowColor #444444
+skinparam legend {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+}
+
+actor "Pacientes e profissionais\n(app / web)" as Usuarios
+actor "Farmácia" as Farmacia
+node "Monitor externo\n(ex.: UptimeRobot)" as Monitor
+
+node "Servidor (Docker)" {
+  node "Proxy reverso\n(HTTPS / TLS)" as Proxy
+  note right of Proxy
+    Termina o TLS e repassa o
+    X-Forwarded-For. O IP dele vai em
+    TRUST_PROXY na API.
+  end note
+
+  node "Contêiner api (réplica 1..N)" as Api {
+    artifact "Imagem sghss-api\n(Bun, usuário não-root, tini)" as Imagem
+  }
+  note right of Api
+    Stateless: autenticação por JWT, sem
+    sessão em memória. Novas réplicas
+    entram atrás do proxy sem mudança
+    no código.
+  end note
+
+  node "Contêiner migrate\n(executa e termina)" as Migrate
+  node "Contêiner postgres" as Pg {
+    database "PostgreSQL 16\n(volume persistente)" as Banco
+  }
+  artifact "backups/*.dump\n(pg_dump, retenção)" as Backups
+}
+
+cloud "Armazenamento externo\n(cópia dos backups)" as Externo
+cloud "Provedor de vídeo" as Video
+node "GitHub Actions\n(CI: lint, tipos, testes,\ncobertura)" as CI
+
+Usuarios --> Proxy : HTTPS
+Farmacia --> Proxy : HTTPS (validação de receita)
+Monitor --> Proxy : GET /health/ready
+Proxy --> Api : HTTP (rede interna)
+Api --> Banco : TCP 5432
+Api --> Video : API do provedor
+Migrate --> Banco : prisma migrate deploy\n(antes da API subir)
+Banco ..> Backups : bun run db:backup (diário)
+Backups ..> Externo : cópia fora do servidor
+CI ..> Imagem : valida cada pull request
+
+legend bottom left
+  <b>Escalabilidade horizontal (RNF06)</b>: a API não guarda estado entre requisições; basta subir mais réplicas atrás do proxy.
+  A rotina de lembretes usa uma trava no PostgreSQL (advisory lock), então roda uma vez por ciclo mesmo com várias réplicas.
+  Ponto de atenção: os limites de requisições (login, cadastro, validação de receita) ficam em memória por réplica;
+  com várias réplicas, devem migrar para um armazenamento compartilhado (ex.: Redis).
+  <b>Multiunidade</b>: um único banco atende todas as unidades; cada registro operacional aponta para a sua unidade.
+endlegend
+
+@enduml

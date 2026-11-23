@@ -295,7 +295,7 @@ suprimento ||--o{ movimentacao
 legend bottom left
   <b>Notação</b>: pé de galinha (IE). <b>*</b> = obrigatório; <b><<UK>></b> = único.
   Campos <b>_cifrado</b> são criptografados com AES-256-GCM; <b>cpf_hash</b> (HMAC-SHA-256) permite a busca por CPF.
-  Entidades em cinza são opcionais (RF30, RF31) e <b>anonimizado_em</b> atende ao RF26 opcional: modelados, implementação condicionada ao tempo.
+  Entidades em cinza atendem aos requisitos opcionais RF30 e RF31, e <b>anonimizado_em</b> ao RF26 opcional; todos foram implementados.
   <b>Enums</b>: perfil (ADMIN, MEDICO, ENFERMEIRO, TECNICO, PACIENTE) · tipo_unidade (HOSPITAL, CLINICA, LABORATORIO, HOME_CARE)
   conselho (CRM, COREN) · status_horario (DISPONIVEL, RESERVADO, BLOQUEADO) · modalidade_consulta (PRESENCIAL, TELEMEDICINA)
   status_consulta (AGENDADA, REALIZADA, CANCELADA) · status_exame (AGENDADO, REALIZADO, CANCELADO)

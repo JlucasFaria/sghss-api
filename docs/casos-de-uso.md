@@ -1,6 +1,6 @@
 # Casos de uso do SGHSS — VidaPlus
 
-Os casos de uso derivam dos [requisitos](requisitos.md) e são a origem dos endpoints da API: cada caso de uso vira uma ou mais operações REST (por exemplo, "UC06 Gerenciar pacientes" → `GET/PUT/DELETE /pacientes/:id`).
+Os casos de uso derivam dos [requisitos](requisitos.md) e são a origem dos endpoints da API: cada caso de uso vira uma ou mais operações REST (por exemplo, "UC06 Gerenciar pacientes" → `GET/PUT/DELETE /pacientes/{id}`); a lista completa está em [endpoints](endpoints.md).
 
 Para manter os diagramas legíveis, eles foram separados por grupo de atores. A numeração dos casos de uso é única entre os três diagramas. Fontes PlantUML em [`diagramas/`](diagramas/); para regerar os PNGs, rode `bun run docs:diagramas`.
 

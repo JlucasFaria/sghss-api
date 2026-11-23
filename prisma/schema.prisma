@@ -349,7 +349,7 @@ model Internacao {
   @@map("internacao")
 }
 
-// Opcional (RF30): modelado no banco, implementação condicionada ao tempo.
+// Opcional (RF30): o saldo só muda por movimentações; o alerta é quantidade <= estoqueMinimo.
 model Suprimento {
   id            String   @id @default(uuid()) @db.Uuid
   unidadeId     String   @map("unidade_id") @db.Uuid
@@ -391,7 +391,7 @@ enum TipoLancamento {
   @@map("tipo_lancamento")
 }
 
-// Opcional (RF31): modelado no banco, implementação condicionada ao tempo.
+// Opcional (RF31): somente inclusão; uma correção é um lançamento de estorno.
 model LancamentoFinanceiro {
   id          String         @id @default(uuid()) @db.Uuid
   unidadeId   String         @map("unidade_id") @db.Uuid

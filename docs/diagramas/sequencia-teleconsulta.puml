@@ -1,0 +1,89 @@
+@startuml sequencia-teleconsulta
+title SGHSS VidaPlus — Sequência: teleconsulta (RF18, RF19)
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+  ArrowColor #444444
+  LifeLineBorderColor #3B6EA5
+  ParticipantBorderColor #3B6EA5
+  ParticipantBackgroundColor #F5F9FF
+  ActorBorderColor #3B6EA5
+  ActorBackgroundColor #F5F9FF
+  GroupBorderColor #3B6EA5
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+}
+
+actor "Profissional" as Medico
+actor Paciente
+participant "TelemedicinaService" as Servico
+participant "ProvedorVideo\n<<porta>>" as Provedor
+database "PostgreSQL" as Banco
+
+== 1. Criação da sala (POST /consultas/{id}/teleconsulta) ==
+Medico -> Servico : criarSala(consultaId)
+Servico -> Banco : consulta do profissional, de telemedicina e AGENDADA?
+alt sala já existe
+  Servico --> Medico : 200 (mesma sala: chamada idempotente)
+else janela já terminou
+  Servico --> Medico : 409
+end
+Servico -> Provedor : criarSala(consultaId, início, fim)
+alt provedor fora do ar
+  Provedor --> Servico : erro
+  Servico --> Medico : 502 (nada é gravado)
+end
+Provedor --> Servico : salaId, urlSala
+group transação
+  Servico -> Banco : INSERT teleconsulta
+  Servico -> Banco : INSERT log_auditoria (TELECONSULTA_CRIADA)
+end
+Servico --> Medico : 201 { urlSala }
+
+== 2. Entrada (POST /consultas/{id}/teleconsulta/entrada) ==
+Paciente -> Servico : entrarNaTeleconsulta(consultaId)
+Servico -> Banco : é o paciente ou o profissional da consulta?
+alt não participa
+  Servico --> Paciente : 404 (não revela que a consulta existe)
+end
+Servico -> Servico : dentro da janela?\n(15 min antes do início até 30 min após o fim)
+alt fora da janela, sala não criada ou encerrada
+  Servico --> Paciente : 409
+end
+Servico -> Provedor : gerarToken(salaId, participante, expiraEm = fim da janela)
+Provedor --> Servico : token temporário
+group transação
+  Servico -> Banco : marca iniciada_em (só na primeira entrada)
+  Servico -> Banco : INSERT log_auditoria (TELECONSULTA_ENTRADA)
+end
+Servico --> Paciente : 200 { urlSala, token, expiraEm }
+note right of Paciente
+  O token não é gravado na API e
+  expira no fim da janela
+end note
+
+== 3. Encerramento (POST /consultas/{id}/teleconsulta/encerramento) ==
+Medico -> Servico : encerrarTeleconsulta(consultaId)
+Servico -> Banco : sala aberta e já iniciada?
+alt ninguém entrou, sala encerrada ou consulta cancelada
+  Servico --> Medico : 409
+end
+Servico -> Provedor : encerrarSala(salaId)
+alt provedor fora do ar
+  Provedor --> Servico : erro
+  Servico --> Medico : 502 (nada é alterado)
+end
+group transação
+  Servico -> Banco : UPDATE teleconsulta SET encerrada_em\nWHERE encerrada_em IS NULL
+  Servico -> Banco : UPDATE consulta SET status = REALIZADA\nWHERE status <> CANCELADA
+  Servico -> Banco : INSERT log_auditoria (TELECONSULTA_ENCERRADA)
+end
+Servico --> Medico : 200 { teleconsulta encerrada }
+
+@enduml

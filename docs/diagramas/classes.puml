@@ -96,8 +96,9 @@ package "Atendimento" {
   }
 
   interface ProvedorVideo <<porta>> {
-    + criarSala(consultaId : string) : object
-    + gerarToken(salaId : string, participante : string) : string
+    + nome : string
+    + criarSala(consultaId : string, inicio : Date, fim : Date) : SalaCriada
+    + gerarToken(salaId : string, participanteId : string, expiraEm : Date) : string
     + encerrarSala(salaId : string) : void
   }
 
@@ -111,7 +112,6 @@ package "Atendimento" {
     - resultado : string <<cifrado>>
     - resultadoEm : Date
     + registrarResultado(resultado : string) : void
-    + cancelar() : void
   }
 }
 
@@ -167,7 +167,7 @@ package "Administração hospitalar" {
     - estoqueMinimo : number
     + registrarEntrada(qtd : number) : void
     + registrarSaida(qtd : number) : void
-    + abaixoDoMinimo() : boolean
+    + estoqueBaixo() : boolean
   }
 
   class MovimentacaoEstoque <<opcional>> {
@@ -253,7 +253,7 @@ legend bottom left
   Atributos <b><<cifrado>></b> são persistidos criptografados (AES-256-GCM) e decifrados no serviço.
   Tipos enumerados (Perfil, StatusConsulta, StatusLeito etc.) e seus valores estão na legenda do DER.
   <b>ProvedorVideo</b> é uma porta (interface): o adaptador simulado pode ser trocado por um provedor real.
-  Classes em cinza são opcionais (RF30, RF31).
+  Classes em cinza atendem aos requisitos opcionais RF30 e RF31 (implementados).
 endlegend
 
 @enduml

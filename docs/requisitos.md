@@ -6,7 +6,7 @@ Levantamento dos requisitos funcionais (RF) e não funcionais (RNF) do Sistema d
 
 A VidaPlus administra hospitais, clínicas de bairro, laboratórios e equipes de home care. O SGHSS centraliza cinco eixos: atendimento de pacientes, gestão de profissionais de saúde, administração hospitalar, telemedicina e segurança/compliance.
 
-Este projeto tem ênfase **Back-end**: o entregável é uma API REST. O recorte implementado cobre os fluxos centrais de cada eixo — autenticação e controle de acesso, pacientes, profissionais e agenda, consultas e exames, prontuário e receitas, telemedicina, notificações, auditoria/LGPD, leitos e internações e relatórios. Requisitos marcados como **Opcional** foram analisados e modelados, mas só serão implementados se houver tempo; caso contrário, ficam documentados como evolução futura.
+Este projeto tem ênfase **Back-end**: o entregável é uma API REST. O recorte implementado cobre os fluxos centrais de cada eixo — autenticação e controle de acesso, pacientes, profissionais e agenda, consultas e exames, prontuário e receitas, telemedicina, notificações, auditoria/LGPD, leitos e internações e relatórios. Requisitos marcados como **Opcional** ficaram fora do fluxo clínico central e foram priorizados depois do núcleo; todos acabaram implementados (anonimização, estoque e financeiro).
 
 ## Perfis de usuário
 
