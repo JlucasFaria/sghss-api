@@ -72,7 +72,7 @@ O relatório em formato LCOV fica em `coverage/lcov.info`; no CI, ele é publica
 
 ## Testes não funcionais
 
-Carga (k6) e segurança (OWASP ZAP) rodam via Docker contra a API local; veja [`tests/README.md`](tests/README.md).
+O [plano de testes](docs/plano-de-testes.md) descreve a estratégia, os casos de teste, os critérios de aceitação e os resultados. Carga (k6) e segurança (OWASP ZAP) rodam via Docker contra a API local; veja [`tests/README.md`](tests/README.md).
 
 ## Coleção Postman
 
