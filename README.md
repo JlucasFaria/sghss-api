@@ -50,6 +50,20 @@ bun run dev
 
 A API sobe em `http://localhost:3000`. Para verificar: `GET /health`.
 
+### Com Docker (API e banco)
+
+Sem instalar o Bun: o Docker Compose sobe o PostgreSQL, aplica as migrations e inicia a API (imagem multi-stage, usuário não-root).
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+
+# Opcional: popular o banco com dados fictícios
+docker compose run --rm migrate bun run db:seed
+```
+
+A API fica em `http://localhost:3000` (Swagger em `/docs`). Ela só inicia depois que o banco está saudável e as migrations foram aplicadas; se o processo cair, o Docker a reinicia (`restart: unless-stopped`). Para desenvolver com `bun run dev`, use `bun run db:up`, que sobe apenas o banco.
+
 ### Testes
 
 Os testes de integração usam um banco separado (`sghss_test`), que é esvaziado a cada teste.
