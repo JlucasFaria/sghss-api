@@ -1,4 +1,5 @@
 // Validação e tipagem das variáveis de ambiente: a aplicação não sobe com configuração inválida
+import { isIP } from "node:net";
 import { z } from "zod";
 import "./zod";
 
@@ -43,6 +44,21 @@ export const envSchema = z
     JWT_SECRET: z
       .string()
       .min(32, "JWT_SECRET deve ter ao menos 32 caracteres"),
+    // IPs dos proxies reversos confiáveis, separados por vírgula. Vazio (padrão) = API
+    // exposta diretamente: o X-Forwarded-For é ignorado, pois o cliente pode forjá-lo
+    TRUST_PROXY: z
+      .string()
+      .default("")
+      .transform((value) =>
+        value
+          .split(",")
+          .map((ip) => ip.trim())
+          .filter(Boolean),
+      )
+      .refine(
+        (ips) => ips.every((ip) => isIP(ip) !== 0),
+        "TRUST_PROXY deve conter apenas endereços IP separados por vírgula",
+      ),
     // Validade do token em segundos (curta: não há refresh token)
     JWT_EXPIRES_IN: z.coerce.number().int().positive().default(3600),
     // Chave AES-256-GCM dos dados sensíveis em repouso: 32 bytes em base64

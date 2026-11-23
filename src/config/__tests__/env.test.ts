@@ -34,6 +34,22 @@ describe("envSchema", () => {
     },
   );
 
+  it("lê TRUST_PROXY como lista de IPs e recusa valores que não são IP", () => {
+    const valido = envSchema.safeParse({
+      ...producao,
+      TRUST_PROXY: "10.0.0.2, ::1",
+    });
+    expect(valido.data?.TRUST_PROXY).toEqual(["10.0.0.2", "::1"]);
+    expect(envSchema.safeParse(producao).data?.TRUST_PROXY).toEqual([]);
+
+    const invalido = envSchema.safeParse({
+      ...producao,
+      TRUST_PROXY: "10.0.0.0/8",
+    });
+    expect(invalido.success).toBe(false);
+    expect(invalido.error?.issues[0]?.path).toEqual(["TRUST_PROXY"]);
+  });
+
   it("aceita os valores de exemplo em desenvolvimento", () => {
     const result = envSchema.safeParse({
       ...producao,
