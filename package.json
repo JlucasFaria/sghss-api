@@ -25,6 +25,7 @@
     "db:test:prepare": "test -f .env.test || (echo \"Crie o .env.test a partir do .env.test.example\" && exit 1) && bun --env-file=.env.test run db:deploy",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
+    "test:seguranca": "bun tests/seguranca/zap.ts",
     "test:carga": "docker run --rm -i --add-host=host.docker.internal:host-gateway -e BASE_URL=http://host.docker.internal:3000 -v ./tests/carga:/scripts grafana/k6:2.4.0 run /scripts/consultas.k6.js",
     "docs:diagramas": "docker run --rm -v ./docs/diagramas:/data plantuml/plantuml:1.2026.10 -tpng -charset UTF-8 '/data/*.puml'"
   },

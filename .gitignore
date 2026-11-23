@@ -25,3 +25,6 @@ coverage
 .vscode
 .DS_Store
 Thumbs.db
+
+# relatórios da varredura do OWASP ZAP
+tests/seguranca/relatorio-zap.*
