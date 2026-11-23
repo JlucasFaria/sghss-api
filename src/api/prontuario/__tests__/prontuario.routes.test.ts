@@ -233,3 +233,31 @@ describe("POST /consultas/:id/conclusao", () => {
     expect(await prisma.registroProntuario.count()).toBe(2);
   });
 });
+
+describe("prontuário somente inclusão (RNF05)", () => {
+  it("não expõe rotas de edição ou exclusão de evoluções", async () => {
+    const consulta = await consultaEm(-1);
+    const criada = await registrar(consulta.id, tokenMedico, "Texto original.");
+    const { data } = await lerJson<{ data: Evolucao }>(criada);
+
+    const tentativas: [string, string][] = [
+      ["PUT", `/consultas/${consulta.id}/prontuario`],
+      ["DELETE", `/consultas/${consulta.id}/prontuario`],
+      ["PUT", `/consultas/${consulta.id}/prontuario/${data.id}`],
+      ["PATCH", `/consultas/${consulta.id}/prontuario/${data.id}`],
+      ["DELETE", `/consultas/${consulta.id}/prontuario/${data.id}`],
+    ];
+    for (const [method, path] of tentativas) {
+      const res = await requisitar(method, path, {
+        token: tokenMedico,
+        body: method === "DELETE" ? undefined : { conteudo: "Alterado." },
+      });
+      expect(res.status).toBe(404);
+    }
+
+    const evolucao = await prisma.registroProntuario.findUniqueOrThrow({
+      where: { id: data.id },
+    });
+    expect(decrypt(evolucao.conteudoCifrado)).toBe("Texto original.");
+  });
+});

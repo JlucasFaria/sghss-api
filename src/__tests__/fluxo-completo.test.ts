@@ -146,7 +146,8 @@ it("paciente agenda, médico atende e prescreve, farmácia valida a receita", as
     body: { conteudo: "Registro antecipado." },
   });
 
-  // 4. Chega o horário da consulta
+  // 4. Chega o horário da consulta. Os tokens emitidos antes continuam válidos porque
+  // o avanço (35 min) é menor que a validade do JWT (JWT_EXPIRES_IN, padrão de 1 h)
   setSystemTime(new Date(inicio.getTime() + 5 * MINUTO));
 
   await chamar(201, "POST", `/consultas/${consulta.id}/prontuario`, {

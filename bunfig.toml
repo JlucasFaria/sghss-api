@@ -2,7 +2,9 @@
 
 [test]
 # Cobertura (ativada com "bun test --coverage", ou "bun run test:coverage"):
-# o comando falha se algum arquivo ficar abaixo de 80% de linhas ou de funções
+# o comando falha se algum arquivo ficar abaixo de 80% de linhas ou de funções.
+# Só entram na conta os arquivos carregados por algum teste; hoje todas as rotas e
+# services são carregados pelo app.
 coverageThreshold = { lines = 0.8, functions = 0.8 }
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage"
