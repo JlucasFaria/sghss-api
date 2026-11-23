@@ -64,6 +64,13 @@ docker compose run --rm migrate bun run db:seed
 
 A API fica em `http://localhost:3000` (Swagger em `/docs`). Ela só inicia depois que o banco está saudável e as migrations foram aplicadas; se o processo cair, o Docker a reinicia (`restart: unless-stopped`). Para desenvolver com `bun run dev`, use `bun run db:up`, que sobe apenas o banco.
 
+Com o `.env` copiado do exemplo, o compose roda em modo **desenvolvimento**: aceita os segredos de exemplo e o CORS aberto, o que serve para avaliar localmente. Para produção, ajuste o `.env`:
+
+- `NODE_ENV="production"`: com ele, a API se recusa a iniciar com os segredos do exemplo ou com `CORS_ORIGIN="*"`;
+- `JWT_SECRET`, `ENCRYPTION_KEY` e `CPF_HASH_KEY` novos (o comando para gerar está no `.env.example`) e guardados em local seguro;
+- `CORS_ORIGIN` com as origens do front-end e `POSTGRES_PASSWORD` forte;
+- proxy reverso com HTTPS na frente da API, com o IP dele em `TRUST_PROXY`.
+
 ### Testes
 
 Os testes de integração usam um banco separado (`sghss_test`), que é esvaziado a cada teste.
@@ -92,7 +99,7 @@ bun run db:backup
 
 Gera `backups/<banco>-<data>.dump` com `pg_dump` (formato custom, compactado) dentro do container do PostgreSQL e apaga os backups com mais de `BACKUP_RETENCAO_DIAS` dias (padrão: 7). A pasta `backups/` fica fora do controle de versão; em produção, copie os arquivos para outro local (outro disco ou armazenamento externo). Para backups diários, agende o comando no cron (Linux) ou no Agendador de Tarefas (Windows), por exemplo `0 2 * * * cd /caminho/sghss-api && bun run db:backup`.
 
-O dump contém dados pessoais (nome, e-mail, consultas e trilha de auditoria) e é gravado com permissão de leitura só para o dono do arquivo. Os campos sensíveis (CPF, telefone, prontuário e resultados de exames) já estão cifrados no banco: guarde as cópias fora do servidor e **nunca no mesmo lugar que a `ENCRYPTION_KEY`**, que sem ela não podem ser lidos.
+O dump contém dados pessoais (nome, e-mail, consultas e trilha de auditoria) e é gravado com permissão de leitura só para o dono do arquivo. Os campos sensíveis (CPF, telefone, prontuário e resultados de exames) já estão cifrados no banco: guarde as cópias fora do servidor e **nunca no mesmo lugar que a `ENCRYPTION_KEY`**: sem ela, esses campos não podem ser lidos.
 
 Para restaurar (substitui os dados atuais do banco):
 
