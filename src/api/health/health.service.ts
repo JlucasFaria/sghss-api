@@ -3,7 +3,7 @@ import { prisma } from "../../db/client";
 import { AppError } from "../../utils/app-error";
 
 // Sem limite, uma conexão travada deixaria o monitor esperando indefinidamente
-export const TEMPO_LIMITE_BANCO_MS = 2000;
+const TEMPO_LIMITE_BANCO_MS = 2000;
 
 const consultaMinima = () => prisma.$queryRaw`SELECT 1`;
 

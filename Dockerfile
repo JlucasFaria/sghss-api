@@ -34,14 +34,15 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# tini como PID 1: repassa os sinais (o processo como PID 1 ignoraria o SIGTERM do
+# "docker stop", que esperaria o tempo limite e mataria a API à força). Instalado antes
+# das cópias para a camada ser reaproveitada quando só o código muda.
+RUN apk add --no-cache tini
+
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=deps /app/generated ./generated
-COPY package.json tsconfig.json ./
+COPY package.json ./
 COPY src ./src
-
-# tini como PID 1: repassa os sinais (o processo como PID 1 ignoraria o SIGTERM do
-# "docker stop", que esperaria o tempo limite e mataria a API à força)
-RUN apk add --no-cache tini
 
 # Usuário sem privilégios, já existente na imagem oficial do Bun
 USER bun

@@ -92,6 +92,8 @@ bun run db:backup
 
 Gera `backups/<banco>-<data>.dump` com `pg_dump` (formato custom, compactado) dentro do container do PostgreSQL e apaga os backups com mais de `BACKUP_RETENCAO_DIAS` dias (padrão: 7). A pasta `backups/` fica fora do controle de versão; em produção, copie os arquivos para outro local (outro disco ou armazenamento externo). Para backups diários, agende o comando no cron (Linux) ou no Agendador de Tarefas (Windows), por exemplo `0 2 * * * cd /caminho/sghss-api && bun run db:backup`.
 
+O dump contém dados pessoais (nome, e-mail, consultas e trilha de auditoria) e é gravado com permissão de leitura só para o dono do arquivo. Os campos sensíveis (CPF, telefone, prontuário e resultados de exames) já estão cifrados no banco: guarde as cópias fora do servidor e **nunca no mesmo lugar que a `ENCRYPTION_KEY`**, que sem ela não podem ser lidos.
+
 Para restaurar (substitui os dados atuais do banco):
 
 ```bash

@@ -1,8 +1,9 @@
 // Backup do banco (RNF08): pg_dump dentro do container do PostgreSQL, gravado em
 // backups/ no formato custom (compactado, restaurável com pg_restore), e remoção dos
-// backups mais antigos que a retenção.
+// backups mais antigos que a retenção. Guarde as cópias fora do servidor e longe das
+// chaves de criptografia (veja o README).
 // Execução: bun run db:backup. Agende uma execução diária (cron ou Agendador de Tarefas).
-import { mkdir, readdir, stat, unlink } from "node:fs/promises";
+import { chmod, mkdir, readdir, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
 
 const PASTA = process.env.BACKUP_DIR ?? "backups";
@@ -49,6 +50,10 @@ if ((await dump.exited) !== 0) {
   console.error("Falha no pg_dump: o backup não foi gravado.");
   process.exit(1);
 }
+
+// O dump tem dados pessoais (nome, e-mail, consultas, auditoria): só o dono do
+// arquivo lê. Os campos sensíveis já estão cifrados no banco. Sem efeito no Windows.
+await chmod(arquivo, 0o600);
 
 const { size } = await stat(arquivo);
 console.log(`Backup gravado: ${arquivo} (${(size / 1024).toFixed(1)} KB)`);
