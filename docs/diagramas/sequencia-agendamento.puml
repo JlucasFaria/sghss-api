@@ -1,0 +1,76 @@
+@startuml sequencia-agendamento
+title SGHSS VidaPlus — Sequência: agendamento de consulta (RF11, RF20, RF22)
+
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam sequence {
+  ArrowColor #444444
+  LifeLineBorderColor #3B6EA5
+  ParticipantBorderColor #3B6EA5
+  ParticipantBackgroundColor #F5F9FF
+  ActorBorderColor #3B6EA5
+  ActorBackgroundColor #F5F9FF
+  GroupBorderColor #3B6EA5
+}
+skinparam note {
+  BackgroundColor #FFFFFF
+  BorderColor #999999
+}
+
+actor Paciente
+participant "Rota\nPOST /consultas" as Rota
+participant "Middlewares\n(auth + RBAC)" as Auth
+participant "ConsultasService" as Servico
+database "PostgreSQL" as Banco
+
+Paciente -> Rota : POST /consultas\n{ horarioId, modalidade, motivo }
+Rota -> Auth : token Bearer
+Auth -> Banco : usuário ativo? (a cada requisição)
+Banco --> Auth : usuário e perfil
+alt token inválido ou conta inativa
+  Auth --> Paciente : 401
+else perfil diferente de PACIENTE
+  Auth --> Paciente : 403
+end
+Rota -> Rota : valida o corpo (Zod)
+note right : corpo inválido → 400 com o campo
+
+Rota -> Servico : agendarConsulta(dados, ator)
+activate Servico
+
+group transação
+  Servico -> Banco : SELECT ... FROM paciente FOR UPDATE
+  note right of Banco
+    Serializa os agendamentos do mesmo paciente:
+    requisições simultâneas não driblam a checagem de conflito
+  end note
+  Servico -> Banco : horário existe, é futuro, profissional e unidade ativos?
+  alt não
+    Servico --> Paciente : 404 ou 409
+  end
+  Servico -> Banco : paciente já tem consulta no período?
+  alt sim
+    Servico --> Paciente : 409 (conflito de agenda)
+  end
+  Servico -> Banco : UPDATE horario_agenda SET status = RESERVADO\nWHERE id = ? AND status = DISPONIVEL
+  alt nenhuma linha alterada (outro paciente reservou antes)
+    Servico --> Paciente : 409 (horário indisponível)
+  end
+  Servico -> Banco : INSERT consulta (status AGENDADA)
+  Servico -> Banco : INSERT log_auditoria (CONSULTA_AGENDADA, usuário, IP)
+  Servico -> Banco : INSERT notificacao (CONSULTA_AGENDADA)
+end
+note right of Servico
+  Qualquer falha desfaz tudo:
+  horário, consulta, auditoria e notificação
+end note
+
+Servico -> Banco : lê a consulta completa (após o commit)
+Servico --> Rota : consulta
+deactivate Servico
+Rota --> Paciente : 201 { data: consulta }
+
+@enduml
