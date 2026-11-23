@@ -84,6 +84,20 @@ bun run test:coverage
 
 O relatório em formato LCOV fica em `coverage/lcov.info`; no CI, ele é publicado como artefato de cada execução.
 
+## Backup e restauração
+
+```bash
+bun run db:backup
+```
+
+Gera `backups/<banco>-<data>.dump` com `pg_dump` (formato custom, compactado) dentro do container do PostgreSQL e apaga os backups com mais de `BACKUP_RETENCAO_DIAS` dias (padrão: 7). A pasta `backups/` fica fora do controle de versão; em produção, copie os arquivos para outro local (outro disco ou armazenamento externo). Para backups diários, agende o comando no cron (Linux) ou no Agendador de Tarefas (Windows), por exemplo `0 2 * * * cd /caminho/sghss-api && bun run db:backup`.
+
+Para restaurar (substitui os dados atuais do banco):
+
+```bash
+docker compose exec -T postgres pg_restore --clean --if-exists --no-owner   -U sghss -d sghss < backups/sghss-AAAA-MM-DDTHH-MM-SS.dump
+```
+
 ## Testes não funcionais
 
 O [plano de testes](docs/plano-de-testes.md) descreve a estratégia, os casos de teste, os critérios de aceitação e os resultados. Carga (k6) e segurança (OWASP ZAP) rodam via Docker contra a API local; veja [`tests/README.md`](tests/README.md).
@@ -116,6 +130,7 @@ A pasta [`docs/postman`](docs/postman/README.md) tem a coleção com o fluxo aut
 | `bun run db:deploy`       | Aplica migrations pendentes (CI/produção)     |
 | `bun run db:seed`         | Popula o banco com dados fictícios (dev)      |
 | `bun run db:studio`       | Abre o Prisma Studio                          |
+| `bun run db:backup`       | Backup do banco com retenção (pg_dump)        |
 | `bun run db:test:prepare` | Cria o banco de testes e aplica as migrations |
 | `bun run docs:diagramas`  | Gera os PNGs dos diagramas PlantUML (Docker)  |
 
