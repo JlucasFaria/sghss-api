@@ -77,7 +77,7 @@ Formato: **ID · entrada · comportamento esperado · resultado esperado · resu
 | CT24 | RF31        | Lançamentos de 0,10 e 0,20                                            | Soma em decimal, sem erro de ponto flutuante                                   | Receitas `"0.30"`                                   | Aprovado (`relatorios.routes.test.ts`)                                                               |
 | CT25 | RNF04       | Erro inesperado no servidor                                           | Mensagem genérica, detalhe só no log interno                                   | 500 sem a mensagem original                         | Aprovado (`error-handler.test.ts`)                                                                   |
 | CT26 | Integração  | Fluxo completo pela API, do cadastro do médico à validação da receita | Módulos funcionando em conjunto; auditoria na ordem dos eventos                | Todas as etapas com o status esperado               | Aprovado (`fluxo-completo.test.ts`)                                                                  |
-| CT27 | RNF07       | Carga: 20 usuários navegando e 5 agendando por 1 min 30 s             | Desempenho dentro da meta sob concorrência                                     | p95 < 500 ms e erros < 1%                           | Aprovado: p95 = 31,3 ms; 0% de erros em 8.310 requisições                                            |
+| CT27 | RNF07       | Carga: 20 usuários navegando e 5 agendando por 1 min 30 s             | Desempenho dentro da meta sob concorrência, também só na escrita               | p95 < 500 ms (geral e do agendamento) e erros < 1%  | Aprovado: p95 = 39,0 ms (agendamento: 50,7 ms); 0% de erros em 8.235 requisições                     |
 | CT28 | RNF03       | Varredura OWASP ZAP baseline autenticada (71 URLs do contrato)        | Sem alertas de segurança pendentes                                             | 0 FAIL e 0 WARN                                     | Aprovado: 119 regras aprovadas; 1 alerta informativo justificado (CORS aberto só em desenvolvimento) |
 | CT29 | RNF12       | Suíte automatizada com cobertura                                      | Cobertura mínima garantida no CI                                               | ≥ 80% de linhas e funções em cada arquivo           | Aprovado: 99,56% de linhas e 99,80% de funções (391 testes)                                          |
 | CT30 | Postman     | Coleção completa (42 requisições, 77 asserções)                       | Fluxo autenticado e casos negativos passando em sequência                      | 0 falhas                                            | Aprovado: 77/77 asserções                                                                            |
@@ -90,17 +90,17 @@ Uma entrega (pull request) é aceita quando:
 2. Todos os testes automatizados passam no CI, com banco real.
 3. Nenhum arquivo fica abaixo de 80% de linhas ou de funções cobertas.
 4. Todo requisito implementado tem ao menos um caso de teste na [matriz de rastreabilidade](rastreabilidade.md).
-5. Antes de uma versão: carga com p95 < 500 ms e erros < 1%; varredura ZAP sem WARN ou FAIL pendente; coleção Postman sem falhas.
+5. Antes de uma versão: carga com p95 < 500 ms (no geral e no agendamento) e erros < 1%; varredura ZAP sem WARN ou FAIL pendente; coleção Postman sem falhas.
 
 ## 7. Resultados consolidados
 
-| Verificação                    | Resultado                                                      |
-| ------------------------------ | -------------------------------------------------------------- |
-| Testes automatizados           | 391 testes em 33 arquivos, todos aprovados                     |
-| Cobertura                      | 99,56% das linhas e 99,80% das funções                         |
-| Coleção Postman (Newman)       | 42 requisições, 77 asserções, 0 falhas                         |
-| Carga (k6)                     | 8.310 requisições; p95 = 31,3 ms; 0% de erros; 100% dos checks |
-| Segurança (OWASP ZAP baseline) | 0 FAIL, 0 WARN, 1 INFO justificado, 119 regras aprovadas       |
+| Verificação                    | Resultado                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| Testes automatizados           | 391 testes em 33 arquivos, todos aprovados                                            |
+| Cobertura                      | 99,56% das linhas e 99,80% das funções                                                |
+| Coleção Postman (Newman)       | 42 requisições, 77 asserções, 0 falhas                                                |
+| Carga (k6)                     | 8.235 requisições; p95 = 39,0 ms (agendamento: 50,7 ms); 0% de erros; 100% dos checks |
+| Segurança (OWASP ZAP baseline) | 0 FAIL, 0 WARN, 1 INFO justificado, 119 regras aprovadas                              |
 
 ## 8. Riscos do sistema e mitigação
 

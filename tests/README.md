@@ -17,7 +17,7 @@ O script `carga/consultas.k6.js` roda dois cenários ao mesmo tempo, por 1 min 3
 | `navegacao`   | sobe até 20 em 20 s | Consultas do paciente, agenda do dia, histórico, notificações e relatório de ocupação de leitos |
 | `agendamento` | 5 constantes        | Agenda e cancela consultas (escrita com transação e travas no banco)                            |
 
-Metas (thresholds): **p95 < 500 ms**, **taxa de erro < 1%** e **checks > 99%**. Se alguma não for atingida, o k6 termina com código de saída diferente de zero.
+Metas (thresholds): **p95 < 500 ms** no geral e só no cenário de agendamento (para a escrita não ficar escondida pelas leituras), **taxa de erro < 1%** e **checks > 99%**. Se alguma não for atingida, o k6 termina com código de saída diferente de zero.
 
 O login é feito uma vez no `setup` (a API limita tentativas de login), que também abre um horário por usuário virtual em um dia sorteado no futuro, para não colidir com execuções anteriores.
 

@@ -35,9 +35,10 @@ const zap = Bun.spawn(
     "run",
     "--rm",
     "--add-host=host.docker.internal:host-gateway",
-    // Cabeçalho acrescentado pelo ZAP em todas as requisições
+    // Cabeçalho acrescentado pelo ZAP em todas as requisições. Só o nome vai no
+    // comando; o valor vem do ambiente, para o token não aparecer na lista de processos
     "-e",
-    `ZAP_AUTH_HEADER_VALUE=Bearer ${data.token}`,
+    "ZAP_AUTH_HEADER_VALUE",
     "-v",
     `${pasta}:/zap/wrk:rw`,
     IMAGEM,
@@ -54,7 +55,11 @@ const zap = Bun.spawn(
     "-J",
     "relatorio-zap.json",
   ],
-  { stdout: "inherit", stderr: "inherit" },
+  {
+    env: { ...process.env, ZAP_AUTH_HEADER_VALUE: `Bearer ${data.token}` },
+    stdout: "inherit",
+    stderr: "inherit",
+  },
 );
 
 // 0 = sem alertas; 1 = alguma regra marcada como FAIL; 2 = só avisos (WARN)

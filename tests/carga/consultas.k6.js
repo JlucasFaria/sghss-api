@@ -43,6 +43,9 @@ export const options = {
   },
   thresholds: {
     http_req_duration: ["p(95)<500"],
+    // A escrita é minoria das requisições: sem meta própria, um agendamento lento
+    // ficaria escondido no p95 geral, dominado pelas leituras
+    "http_req_duration{scenario:agendamento}": ["p(95)<500"],
     http_req_failed: ["rate<0.01"],
     checks: ["rate>0.99"],
   },
@@ -67,9 +70,10 @@ function login(email) {
   return res.json("data.token");
 }
 
-// Login uma única vez (o login tem limite de tentativas) e um horário por usuário
-// virtual do agendamento, em um dia sorteado no futuro para não colidir com
-// execuções anteriores
+// Login uma única vez (o login tem limite de tentativas) e os horários do
+// agendamento, em um dia sorteado no futuro para não colidir com execuções
+// anteriores. É aberto um horário por usuário virtual do teste inteiro, porque o id
+// do VU (exec.vu.idInTest) é numerado no teste todo, não por cenário.
 export function setup() {
   const admin = login("admin@vidaplus.example");
   const medico = login("ana.souza@vidaplus.example");
