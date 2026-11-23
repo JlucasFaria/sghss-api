@@ -28,3 +28,6 @@ Thumbs.db
 
 # relatórios da varredura do OWASP ZAP
 tests/seguranca/relatorio-zap.*
+
+# backups do banco (bun run db:backup)
+backups

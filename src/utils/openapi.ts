@@ -24,6 +24,7 @@ const errorDescriptions = {
   409: "Conflito com o estado atual do recurso",
   429: "Muitas requisições",
   502: "Serviço externo indisponível",
+  503: "Serviço indisponível (ex.: banco de dados fora do ar)",
 } as const;
 
 type ErrorStatus = keyof typeof errorDescriptions;

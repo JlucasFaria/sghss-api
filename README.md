@@ -48,7 +48,28 @@ bun run db:seed
 bun run dev
 ```
 
-A API sobe em `http://localhost:3000`. Para verificar: `GET /health`.
+A API sobe em `http://localhost:3000`. Para verificar: `GET /health` (processo no ar) e `GET /health/ready` (inclui o banco).
+
+### Com Docker (API e banco)
+
+Sem instalar o Bun: o Docker Compose sobe o PostgreSQL, aplica as migrations e inicia a API (imagem multi-stage, usuário não-root).
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+
+# Opcional: popular o banco com dados fictícios
+docker compose run --rm migrate bun run db:seed
+```
+
+A API fica em `http://localhost:3000` (Swagger em `/docs`). Ela só inicia depois que o banco está saudável e as migrations foram aplicadas; se o processo cair, o Docker a reinicia (`restart: unless-stopped`). Para desenvolver com `bun run dev`, use `bun run db:up`, que sobe apenas o banco.
+
+Com o `.env` copiado do exemplo, o compose roda em modo **desenvolvimento**: aceita os segredos de exemplo e o CORS aberto, o que serve para avaliar localmente. Para produção, ajuste o `.env`:
+
+- `NODE_ENV="production"`: com ele, a API se recusa a iniciar com os segredos do exemplo ou com `CORS_ORIGIN="*"`;
+- `JWT_SECRET`, `ENCRYPTION_KEY` e `CPF_HASH_KEY` novos (o comando para gerar está no `.env.example`) e guardados em local seguro;
+- `CORS_ORIGIN` com as origens do front-end e `POSTGRES_PASSWORD` forte;
+- proxy reverso com HTTPS na frente da API, com o IP dele em `TRUST_PROXY`.
 
 ### Testes
 
@@ -69,6 +90,22 @@ bun run test:coverage
 ```
 
 O relatório em formato LCOV fica em `coverage/lcov.info`; no CI, ele é publicado como artefato de cada execução.
+
+## Backup e restauração
+
+```bash
+bun run db:backup
+```
+
+Gera `backups/<banco>-<data>.dump` com `pg_dump` (formato custom, compactado) dentro do container do PostgreSQL e apaga os backups com mais de `BACKUP_RETENCAO_DIAS` dias (padrão: 7). A pasta `backups/` fica fora do controle de versão; em produção, copie os arquivos para outro local (outro disco ou armazenamento externo). Para backups diários, agende o comando no cron (Linux) ou no Agendador de Tarefas (Windows), por exemplo `0 2 * * * cd /caminho/sghss-api && bun run db:backup`.
+
+O dump contém dados pessoais (nome, e-mail, consultas e trilha de auditoria) e é gravado com permissão de leitura só para o dono do arquivo. Os campos sensíveis (CPF, telefone, prontuário e resultados de exames) já estão cifrados no banco: guarde as cópias fora do servidor e **nunca no mesmo lugar que a `ENCRYPTION_KEY`**: sem ela, esses campos não podem ser lidos.
+
+Para restaurar (substitui os dados atuais do banco):
+
+```bash
+docker compose exec -T postgres pg_restore --clean --if-exists --no-owner   -U sghss -d sghss < backups/sghss-AAAA-MM-DDTHH-MM-SS.dump
+```
 
 ## Testes não funcionais
 
@@ -102,6 +139,7 @@ A pasta [`docs/postman`](docs/postman/README.md) tem a coleção com o fluxo aut
 | `bun run db:deploy`       | Aplica migrations pendentes (CI/produção)     |
 | `bun run db:seed`         | Popula o banco com dados fictícios (dev)      |
 | `bun run db:studio`       | Abre o Prisma Studio                          |
+| `bun run db:backup`       | Backup do banco com retenção (pg_dump)        |
 | `bun run db:test:prepare` | Cria o banco de testes e aplica as migrations |
 | `bun run docs:diagramas`  | Gera os PNGs dos diagramas PlantUML (Docker)  |
 

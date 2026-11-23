@@ -1,0 +1,19 @@
+# Fora da imagem: dependências e artefatos locais (são gerados no build)
+node_modules
+generated
+coverage
+dist
+
+# Segredos e configuração local
+.env
+.env.*
+
+# Itens que não são necessários para executar a API
+.git
+.github
+docs
+tests
+*.md
+*.log
+.idea
+.vscode

@@ -1,3 +1,7 @@
+# Ambiente completo: PostgreSQL, migrations e API (RNF13).
+#   docker compose up -d --build     sobe tudo (aplica as migrations antes da API)
+#   bun run db:up                    sobe só o banco, para desenvolver com "bun run dev"
+# As variáveis vêm do .env (copie o .env.example).
 services:
   postgres:
     image: postgres:16-alpine
@@ -16,6 +20,41 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Executa uma vez e termina: a API só sobe se as migrations forem aplicadas
+  migrate:
+    build:
+      context: .
+      target: migrate
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      target: runtime
+    container_name: sghss-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Dentro da rede do compose o banco é o serviço "postgres", não o localhost
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PORT: 3000
+    ports:
+      # Só na máquina local; em servidor, a API fica atrás de um proxy reverso com HTTPS
+      - "127.0.0.1:${API_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Healthcheck definido no Dockerfile (HEALTHCHECK): o compose marca a API como
+    # unhealthy se ela parar de responder, e o restart policy a reinicia se o processo cair
 
 volumes:
   postgres-data:
